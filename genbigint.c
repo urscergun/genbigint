@@ -351,6 +351,10 @@ void generate_c_h(int bits)
 	fprintf(f, "#ifndef INT%d_H\n", bits);
 	fprintf(f, "#define INT%d_H\n\n", bits);
 
+	fprintf(f, "#ifdef __cplusplus\n");
+	fprintf(f, "extern \"C\" {\n");
+	fprintf(f, "#endif\n\n");
+
 	fprintf(f, "#define INT%d_DIGITS %d\n\n", bits, bits / 64);
 
 	fprintf(f, "typedef long long INT%d[INT%d_DIGITS];\n\n", bits, bits);
@@ -360,7 +364,7 @@ void generate_c_h(int bits)
 	{
 		fprintf(f, "0, ");
 	}
-	fprintf(f, "0x8000000000000000};\n");
+	fprintf(f, "0x8000000000000000 };\n");
 
 	fprintf(f, "static const INT%d INT%d_MAX = { ", bits, bits);
 	for (int i = 1; i < bits / 64; i++)
@@ -369,7 +373,12 @@ void generate_c_h(int bits)
 	}
 	fprintf(f, " 0x7FFFFFFFFFFFFFFF };\n\n");
 
-
+	fprintf(f, "static const INT%d INT%d_ZERO = { ", bits, bits);
+	for (int i = 1; i < bits / 64; i++)
+	{
+		fprintf(f, "0, ");
+	}
+	fprintf(f, " 0 };\n\n");
 
 	fprintf(f, "/* a = i */\n");
 	fprintf(f, "void assign%d(INT%d a, long long i);\n\n", bits, bits);
@@ -379,6 +388,9 @@ void generate_c_h(int bits)
 
 	fprintf(f, "/* return -1 if a < b, 0 if a == b, 1 if a > b */\n");
 	fprintf(f, "int compare%d(const INT%d a, const INT%d b);\n\n", bits, bits, bits);
+
+	fprintf(f, "/* return 1 if negative, else 0 */\n");
+	fprintf(f, "int is_negative%d(INT%d a);\n\n", bits, bits);
 
 	fprintf(f, "/* return a pointer to the base 10 representation */\n");
 	fprintf(f, "char* to_decimal_string%d(const INT%d a, char *buf, int size);\n\n", bits, bits);
@@ -423,9 +435,15 @@ void generate_c_h(int bits)
 	fprintf(f, "void xor%d(INT%d a, INT%d b, INT%d c);\n\n", bits, bits, bits, bits);
 
 	fprintf(f, "/* b = ~a */\n");
-	fprintf(f, "void not%d(INT%d a, INT%d b);\n", bits, bits, bits);
+	fprintf(f, "void not%d(INT%d a, INT%d b);\n\n", bits, bits, bits);
 
+	fprintf(f, "/* parse decimal integer */\n");
 	fprintf(f, "void parse%d(const char *s, INT%d a);\n\n", bits, bits);
+
+	fprintf(f, "#ifdef __cplusplus\n");
+	fprintf(f, "}\n");
+	fprintf(f, "#endif\n\n");
+
 
 	fprintf(f, "#endif\n");
 
@@ -486,6 +504,11 @@ void generate_c(int bits)
 
 	fprintf(f, "    /* negative a, positive b */\n");
 	fprintf(f, "    return -1;\n");
+	fprintf(f, "}\n\n");
+
+	fprintf(f, "int is_negative%d(INT%d a)\n", bits, bits);
+	fprintf(f, "{\n");
+	fprintf(f, "    return ((unsigned long long)a[%d] & 0x8000000000000000) ? 1 : 0;\n", bits / 64 - 1);
 	fprintf(f, "}\n\n");
 
 	fprintf(f, "char* to_decimal_string%d(const INT%d a, char *buf, int size)\n", bits, bits);
@@ -719,7 +742,7 @@ void generate_cpp(int bits)
 	char s[128];
 	FILE* f = NULL;
 
-	sprintf(s, "int%d.hpp", bits);
+	sprintf(s, "cint%d.h", bits);
 	f = fopen(s, "w");
 	if (f == NULL)
 		error("Cannot open file", s);
@@ -733,12 +756,9 @@ void generate_cpp(int bits)
 	fprintf(f, "public:\n");
 	fprintf(f, "    static const int%d min;\n", bits);
 	fprintf(f, "    static const int%d max;\n", bits);
-	fprintf(f, "    static const int%d zero;\n", bits);
-	fprintf(f, "    static const int%d one;\n", bits);
-	fprintf(f, "    static const int%d minus_one;\n\n", bits);
 
 	fprintf(f, "    int%d(long long i = 0);\n", bits);
-	fprintf(f, "    int%d(long long a[%d]);\n\n", bits, bits / 64);
+	fprintf(f, "    int%d(const long long a[%d]);\n\n", bits, bits / 64);
 
 	fprintf(f, "    int%d operator+(const int%d& other) const;\n", bits, bits);
 	fprintf(f, "    int%d operator-(const int%d& other) const;\n", bits, bits);
@@ -793,27 +813,24 @@ void generate_cpp(int bits)
 	fprintf(f, "    long long value[%d];\n", bits / 64);
 	fprintf(f, "};\n");
 
-	sprintf(s, "int%d.cpp", bits);
+	sprintf(s, "cint%d.cpp", bits);
 	f = fopen(s, "w");
 	if (f == NULL)
 		error("Cannot open file", s);
 
 	fprintf(f, "#include \"int%d.h\"\n\n", bits);
-	fprintf(f, "#include \"int%d.hpp\"\n\n", bits);
+	fprintf(f, "#include \"cint%d.h\"\n\n", bits);
 	fprintf(f, "#include <iostream>\n\n");
 
 	fprintf(f, "const int%d int%d::min = INT%d_MIN;\n", bits, bits, bits);
 	fprintf(f, "const int%d int%d::max = INT%d_MAX;\n", bits, bits, bits);
-	fprintf(f, "const int%d int%d::zero = 0;\n", bits, bits);
-	fprintf(f, "const int%d int%d::one = 1;\n", bits, bits);
-	fprintf(f, "const int%d int%d::minus_one = -1;\n\n", bits, bits);
 
 	fprintf(f, "int%d::int%d(long long i)\n", bits, bits);
 	fprintf(f, "{\n");
 	fprintf(f, "    assign%d(value, i);\n", bits);
 	fprintf(f, "}\n\n");
 
-	fprintf(f, "int%d::int%d(long long a[%d])\n", bits, bits, bits / 64);
+	fprintf(f, "int%d::int%d(const long long a[%d])\n", bits, bits, bits / 64);
 	fprintf(f, "{\n");
 	fprintf(f, "    for (int i = 0; i < %d; i++)\n", bits / 64);
 	fprintf(f, "    {\n");
@@ -824,21 +841,21 @@ void generate_cpp(int bits)
 	fprintf(f, "int%d int%d::operator+(const int%d& other) const\n", bits, bits, bits);
 	fprintf(f, "{\n");
 	fprintf(f, "    int%d result;\n", bits);
-	fprintf(f, "    add%d(value, other.value, result.value);\n", bits);
+	fprintf(f, "    add%d((long long*)value, (long long*)other.value, result.value);\n", bits);
 	fprintf(f, "    return result;\n");
 	fprintf(f, "}\n\n");
 
 	fprintf(f, "int%d int%d::operator-(const int%d& other) const\n", bits, bits, bits);
 	fprintf(f, "{\n");
 	fprintf(f, "    int%d result;\n", bits);
-	fprintf(f, "    sub%d(value, other.value, result.value);\n", bits);
+	fprintf(f, "    sub%d((long long*)value, (long long*)other.value, result.value);\n", bits);
 	fprintf(f, "    return result;\n");
 	fprintf(f, "}\n\n");
 
 	fprintf(f, "int%d int%d::operator*(const int%d& other) const\n", bits, bits, bits);
 	fprintf(f, "{\n");
 	fprintf(f, "    int%d result;\n", bits);
-	fprintf(f, "    mul%d(value, other.value, result.value);\n", bits);
+	fprintf(f, "    mul%d((long long*)value, (long long*)other.value, result.value);\n", bits);
 	fprintf(f, "    return result;\n");
 	fprintf(f, "}\n\n");
 
@@ -846,14 +863,14 @@ void generate_cpp(int bits)
 	fprintf(f, "{\n");
 	fprintf(f, "    int%d result;\n", bits);
 	fprintf(f, "    int%d r;\n", bits);
-	fprintf(f, "    div%d(value, other.value, result.value, r.value);\n", bits);
+	fprintf(f, "    div%d((long long*)value, (long long*)other.value, result.value, r.value);\n", bits);
 	fprintf(f, "    return result;\n");
 	fprintf(f, "}\n\n");
 
 	fprintf(f, "int%d int%d::operator%%(const int%d& other) const\n", bits, bits, bits);
 	fprintf(f, "{\n");
-	fprintf(f, "    int%d r;\n", bits);
-	fprintf(f, "    div%d(value, other.value, r.value, value);\n", bits);
+	fprintf(f, "    int%d c, r;\n", bits);
+	fprintf(f, "    div%d((long long*)value, (long long*)other.value, c.value, r.value);\n", bits);
 	fprintf(f, "    return r;\n");
 	fprintf(f, "}\n\n");
 
@@ -889,151 +906,148 @@ void generate_cpp(int bits)
 
 	fprintf(f, "int%d int%d::operator-() const\n", bits, bits);
 	fprintf(f, "{\n");
-	fprintf(f, "    int%d result;\n", bits);
-	fprintf(f, "    neg%d(value, result.value);\n", bits);
+	fprintf(f, "    int%d result = *this;\n", bits);
+	fprintf(f, "    neg%d(result.value);\n", bits);
 	fprintf(f, "    return result;\n");
 	fprintf(f, "}\n\n");
 
 	fprintf(f, "int%d int%d::operator~() const\n", bits, bits);
 	fprintf(f, "{\n");
 	fprintf(f, "    int%d result;\n", bits);
-	fprintf(f, "    not%d(value, result.value);\n", bits);
+	fprintf(f, "    not%d((long long*)value, result.value);\n", bits);
 	fprintf(f, "    return result;\n");
 	fprintf(f, "}\n\n");
 
 	fprintf(f, "int%d int%d::operator&(const int%d& other) const\n", bits, bits, bits);
 	fprintf(f, "{\n");
 	fprintf(f, "    int%d result;\n", bits);
-	fprintf(f, "    and%d(value, other.value, result.value);\n", bits);
+	fprintf(f, "    and%d((long long*)value, (long long*)other.value, result.value);\n", bits);
 	fprintf(f, "    return result;\n");
 	fprintf(f, "}\n\n");
 
 	fprintf(f, "int%d int%d::operator|(const int%d& other) const\n", bits, bits, bits);
 	fprintf(f, "{\n");
 	fprintf(f, "    int%d result;\n", bits);
-	fprintf(f, "    or%d(value, other.value, result.value);\n", bits);
+	fprintf(f, "    or%d((long long*)value, (long long*)other.value, result.value);\n", bits);
 	fprintf(f, "    return result;\n");
 	fprintf(f, "}\n\n");
 
 	fprintf(f, "int%d int%d::operator^(const int%d& other) const\n", bits, bits, bits);
 	fprintf(f, "{\n");
 	fprintf(f, "    int%d result;\n", bits);
-	fprintf(f, "    xor%d(value, other.value, result.value);\n", bits);
+	fprintf(f, "    xor%d((long long*)value, (long long*)other.value, result.value);\n", bits);
 	fprintf(f, "    return result;\n");
 	fprintf(f, "}\n\n");
 
 	fprintf(f, "int%d int%d::operator<<(int shift) const\n", bits, bits);
 	fprintf(f, "{\n");
-	fprintf(f, "    int%d result;\n", bits);
-	fprintf(f, "    shl%d(value, shift, result.value);\n", bits);
+	fprintf(f, "    int%d result = *this;\n", bits);
+	fprintf(f, "    shl%d(result.value, shift);\n", bits);
 	fprintf(f, "    return result;\n");
 	fprintf(f, "}\n\n");
 
 	fprintf(f, "int%d int%d::operator>>(int shift) const\n", bits, bits);
 	fprintf(f, "{\n");
-	fprintf(f, "    int%d result;\n", bits);
-	fprintf(f, "    shr%d(value, shift, result.value);\n", bits);
+	fprintf(f, "    int%d result = *this;\n", bits);
+	fprintf(f, "    shr%d(result.value, shift);\n", bits);
 	fprintf(f, "    return result;\n");
 	fprintf(f, "}\n\n");
 
 	fprintf(f, "int%d& int%d::operator+=(const int%d& other)\n", bits, bits, bits);
 	fprintf(f, "{\n");
-	fprintf(f, "    add%d(value, other.value, value);\n", bits);
+	fprintf(f, "    *this = *this + other;\n");
 	fprintf(f, "    return *this;\n");
 	fprintf(f, "}\n\n");
 
 	fprintf(f, "int%d& int%d::operator-=(const int%d& other)\n", bits, bits, bits);
 	fprintf(f, "{\n");
-	fprintf(f, "    sub%d(value, other.value, value);\n", bits);
+	fprintf(f, "    *this = *this - other;\n");
 	fprintf(f, "    return *this;\n");
 	fprintf(f, "}\n\n");
 
 	fprintf(f, "int%d& int%d::operator*=(const int%d& other)\n", bits, bits, bits);
-
 	fprintf(f, "{\n");
-	fprintf(f, "    mul%d(value, other.value, value);\n", bits);
+	fprintf(f, "    *this = *this * other;\n");
 	fprintf(f, "    return *this;\n");
 	fprintf(f, "}\n\n");
 
 	fprintf(f, "int%d& int%d::operator/=(const int%d& other)\n", bits, bits, bits);
 	fprintf(f, "{\n");
-	fprintf(f, "    int%d r;\n", bits);
-	fprintf(f, "    div%d(value, other.value, value, r.value);\n", bits);
+	fprintf(f, "    *this = *this / other;\n");
 	fprintf(f, "    return *this;\n");
 	fprintf(f, "}\n\n");
 
 	fprintf(f, "int%d& int%d::operator%%=(const int%d& other)\n", bits, bits, bits);
 	fprintf(f, "{\n");
-	fprintf(f, "    int%d r;\n", bits);
-	fprintf(f, "    div%d(value, other.value, r.value, value);\n", bits);
+	fprintf(f, "    *this = *this %% other;\n");
 	fprintf(f, "    return *this;\n");
 	fprintf(f, "}\n\n");
 
 	fprintf(f, "int%d& int%d::operator&=(const int%d& other)\n", bits, bits, bits);
 	fprintf(f, "{\n");
-	fprintf(f, "    and%d(value, other.value, value);\n", bits);
+	fprintf(f, "    *this = *this & other;\n");
 	fprintf(f, "    return *this;\n");
 	fprintf(f, "}\n\n");
 
 	fprintf(f, "int%d& int%d::operator|=(const int%d& other)\n", bits, bits, bits);
 	fprintf(f, "{\n");
-	fprintf(f, "    or%d(value, other.value, value);\n", bits);
+	fprintf(f, "    *this = *this | other;\n");
 	fprintf(f, "    return *this;\n");
 	fprintf(f, "}\n\n");
 
 	fprintf(f, "int%d& int%d::operator^=(const int%d& other)\n", bits, bits, bits);
 	fprintf(f, "{\n");
-	fprintf(f, "    xor%d(value, other.value, value);\n", bits);
+	fprintf(f, "    *this = *this ^ other;\n");
 	fprintf(f, "    return *this;\n");
 	fprintf(f, "}\n\n");
 
 	fprintf(f, "int%d& int%d::operator<<=(int shift)\n", bits, bits);
 	fprintf(f, "{\n");
-	fprintf(f, "    shl%d(value, shift, value);\n", bits);
+	fprintf(f, "    *this = *this << shift;\n");
 	fprintf(f, "    return *this;\n");
 	fprintf(f, "}\n\n");
 
 	fprintf(f, "int%d& int%d::operator>>=(int shift)\n", bits, bits);
 	fprintf(f, "{\n");
-	fprintf(f, "    shr%d(value, shift, value);\n", bits);
+	fprintf(f, "    *this = *this >> shift;\n");
 	fprintf(f, "    return *this;\n");
 	fprintf(f, "}\n\n");
 
 	fprintf(f, "int%d& int%d::operator++()\n", bits, bits);
 	fprintf(f, "{\n");
-	fprintf(f, "    add%d(value, INT%d_ONE.value, value);\n", bits, bits);
+	fprintf(f, "    *this = *this + int%d(1);\n", bits);
 	fprintf(f, "    return *this;\n");
 	fprintf(f, "}\n\n");
 
 	fprintf(f, "int%d int%d::operator++(int)\n", bits, bits);
 	fprintf(f, "{\n");
 	fprintf(f, "    int%d result(*this);\n", bits);
-	fprintf(f, "    add%d(value, INT%d_ONE.value, value);\n", bits, bits);
+	fprintf(f, "    *this = *this + int%d(1);\n", bits);
 	fprintf(f, "    return result;\n");
 
 	fprintf(f, "}\n\n");
 
 	fprintf(f, "int%d& int%d::operator--()\n", bits, bits);
 	fprintf(f, "{\n");
-	fprintf(f, "    sub%d(value, INT%d_ONE.value, value);\n", bits, bits);
+	fprintf(f, "    *this = *this - int%d(1);\n", bits);
 	fprintf(f, "    return *this;\n");
 	fprintf(f, "}\n\n");
 
 	fprintf(f, "int%d int%d::operator--(int)\n", bits, bits);
 	fprintf(f, "{\n");
 	fprintf(f, "    int%d result(*this);\n", bits);
-	fprintf(f, "    sub%d(value, INT%d_ONE.value, value);\n", bits, bits);
+	fprintf(f, "    *this = *this - int%d(1);\n", bits);
 	fprintf(f, "    return result;\n");
 	fprintf(f, "}\n\n");
 
 	fprintf(f, "int%d::operator bool() const\n", bits);
 	fprintf(f, "{\n");
-	fprintf(f, "    return compare%d(value, INT%d_ZERO.value) != 0;\n", bits, bits);
+	fprintf(f, "    return compare%d(value, INT%d_ZERO) != 0;\n", bits, bits);
 	fprintf(f, "}\n\n");
 
 	fprintf(f, "bool int%d::is_negative() const\n", bits);
 	fprintf(f, "{\n");
-	fprintf(f, "    return is_negative%d(value);\n", bits);
+	fprintf(f, "    return is_negative%d((long long*)value);\n", bits);
 	fprintf(f, "}\n\n");
 
 	fprintf(f, "std::ostream& operator<<(std::ostream& os, const int%d& i)\n", bits);
@@ -1044,8 +1058,8 @@ void generate_cpp(int bits)
 
 	fprintf(f, "std::string int%d::to_decimal_string() const\n", bits);
 	fprintf(f, "{\n");
-	fprintf(f, "    char buf[%d / 3 + 1], *s;\n", bits);
-	fprintf(f, "    return ::to_decimal_string(value, buf, sizeof(buf));\n");
+	fprintf(f, "    char buf[%d / 3 + 1];\n", bits);
+	fprintf(f, "    return ::to_decimal_string%d(value, buf, sizeof(buf));\n", bits);
 	fprintf(f, "}\n\n");
 
 	fclose(f);
@@ -1373,17 +1387,17 @@ void generate_test_cpp(int bits)
 	char s[128];
 	FILE* f = NULL;
 
-	sprintf(s, "test_int%d.cpp", bits);
+	sprintf(s, "test_cint%d.cpp", bits);
 	f = fopen(s, "w");
 	if (f == NULL)
 		error("Cannot open file", s);
 
-	fprintf(f, "#include \"int%d.hpp\"\n", bits);
-	fprintf(f, "#include <assert.h>\n");
+	fprintf(f, "#include \"cint%d.h\"\n", bits);
+	fprintf(f, "#include <assert.h>\n\n");
 
 	fprintf(f, "void fibonacci()\n");
 	fprintf(f, "{\n");
-	fprintf(f, "    int%d a = 0, b = 1, c;\n\n", bits);
+	fprintf(f, "    int%d a = 0ll, b = 1, c;\n\n", bits);
 	
 	fprintf(f, "    printf(\"Fibonacci sequence using int%d\\n\");\n\n", bits);
 	fprintf(f, "    for (int i = 0; a <= b; i++)\n");
@@ -1407,38 +1421,37 @@ void generate_test_cpp(int bits)
 	fprintf(f, "    a = 1;\n");
 	fprintf(f, "    b = 2;\n");
 	fprintf(f, "    c = a + b;\n");
-	fprintf(f, "    assert(a == 1);\n");
-	fprintf(f, "    assert(b == 2);\n");
-	fprintf(f, "    assert(c == 3);\n\n");
+	fprintf(f, "    assert(a == int%d(1));\n", bits);
+	fprintf(f, "    assert(b == int%d(2));\n", bits);
+	fprintf(f, "    assert(c == int%d(3));\n\n", bits);
 
 	fprintf(f, "    a = 1;\n");
 	fprintf(f, "    b = -2;\n");
 	fprintf(f, "    c = a + b;\n");
-	fprintf(f, "    assert(a == 1);\n");
-	fprintf(f, "    assert(b == -2);\n");
-	fprintf(f, "    assert(c == -1);\n\n");
+	fprintf(f, "    assert(a == int%d(1));\n", bits);
+	fprintf(f, "    assert(b == int%d(-2));\n", bits);
+	fprintf(f, "    assert(c == int%d(-1));\n\n", bits);
 
 	fprintf(f, "    a = -2;\n");
 	fprintf(f, "    b = 1;\n");
 	fprintf(f, "    c = a + b;\n");
-	fprintf(f, "    assert(a == -2);\n");
-	fprintf(f, "    assert(b == 1);\n");
-	fprintf(f, "    assert(c == -1);\n\n");
+	fprintf(f, "    assert(a == int%d(-2));\n", bits);
+	fprintf(f, "    assert(b == int%d(1));\n", bits);
+	fprintf(f, "    assert(c == int%d(-1));\n\n", bits);
 
 	fprintf(f, "    a = int%d::max;\n", bits);
 	fprintf(f, "    b = 1;\n");
 	fprintf(f, "    c = a + b;\n");
 	fprintf(f, "    assert(a == int%d::max);\n", bits);
-	fprintf(f, "    assert(b == 1);\n");
+	fprintf(f, "    assert(b == int%d(1));\n", bits);
 	fprintf(f, "    assert(c == int%d::min);\n\n", bits);
 
 	fprintf(f, "    a = int%d::min;\n", bits);
 	fprintf(f, "    b = -1;\n");
 	fprintf(f, "    c = a + b;\n");
 	fprintf(f, "    assert(a == int%d::min);\n", bits);
-	fprintf(f, "    assert(b == -1);\n");
+	fprintf(f, "    assert(b == int%d(-1));\n", bits);
 	fprintf(f, "    assert(c == int%d::max);\n\n", bits);
-
 
 	/* test sub */
 
@@ -1447,21 +1460,23 @@ void generate_test_cpp(int bits)
 	fprintf(f, "    a = 1;\n");
 	fprintf(f, "    b = 2;\n");
 	fprintf(f, "    c = a - b;\n");
-	fprintf(f, "    assert(a == 1);\n");
-	fprintf(f, "    assert(b == 2);\n");
-	fprintf(f, "    assert(c == -1);\n\n");
+	fprintf(f, "    assert(a == int%d(1));\n", bits);
+	fprintf(f, "    assert(b == int%d(2));\n", bits);
+	fprintf(f, "    assert(c == int%d(-1));\n\n", bits);
 
 	fprintf(f, "    a = int%d::min;\n", bits);
 	fprintf(f, "    b = 1;\n");
 	fprintf(f, "    c = a - b;\n");
 	fprintf(f, "    assert(a == int%d::min);\n", bits);
-	fprintf(f, "    assert(b == 1);\n");
+	fprintf(f, "    assert(b == int%d(1));\n", bits);
 	fprintf(f, "    assert(c == int%d::max);\n\n", bits);
 
 	fprintf(f, "    a = int%d::max;\n", bits);
 	fprintf(f, "    b = -1;\n");
 	fprintf(f, "    c = a - b;\n");
-	fprintf(f, "    assert(a == int%d::min);\n", bits);
+	fprintf(f, "    assert(a == int%d::max);\n", bits);
+	fprintf(f, "    assert(b == int%d(-1));\n", bits);
+	fprintf(f, "    assert(c == int%d::min);\n\n", bits);
 
 	/* test mul */
 
@@ -1470,36 +1485,36 @@ void generate_test_cpp(int bits)
 	fprintf(f, "    a = 2;\n");
 	fprintf(f, "    b = 3;\n");
 	fprintf(f, "    c = a * b;\n");
-	fprintf(f, "    assert(a == 2);\n");
-	fprintf(f, "    assert(b == 3);\n");
-	fprintf(f, "    assert(c == 6);\n\n");
+	fprintf(f, "    assert(a == int%d(2));\n", bits);
+	fprintf(f, "    assert(b == int%d(3));\n", bits);
+	fprintf(f, "    assert(c == int%d(6));\n\n", bits);
 
 	fprintf(f, "    a = 2;\n");
 	fprintf(f, "    b = -3;\n");
 	fprintf(f, "    c = a * b;\n");
-	fprintf(f, "    assert(a == 2);\n");
-	fprintf(f, "    assert(b == -3);\n");
-	fprintf(f, "    assert(c == -6);\n\n");
+	fprintf(f, "    assert(a == int%d(2));\n", bits);
+	fprintf(f, "    assert(b == int%d(-3));\n", bits);
+	fprintf(f, "    assert(c == int%d(-6));\n\n", bits);
 
 	fprintf(f, "    a = -2;\n");
 	fprintf(f, "    b = 3;\n");
 	fprintf(f, "    c = a * b;\n");
-	fprintf(f, "    assert(a == -2);\n");
-	fprintf(f, "    assert(b == 3);\n");
-	fprintf(f, "    assert(c == -6);\n\n");
+	fprintf(f, "    assert(a == int%d(-2));\n", bits);
+	fprintf(f, "    assert(b == int%d(3));\n", bits);
+	fprintf(f, "    assert(c == int%d(-6));\n\n", bits);
 
 	fprintf(f, "    a = -2;\n");
 	fprintf(f, "    b = -3;\n");
 	fprintf(f, "    c = a * b;\n");
-	fprintf(f, "    assert(a == -2);\n");
-	fprintf(f, "    assert(b == -3);\n");
-	fprintf(f, "    assert(c == 6);\n\n");
+	fprintf(f, "    assert(a == int%d(-2));\n", bits);
+	fprintf(f, "    assert(b == int%d(-3));\n", bits);
+	fprintf(f, "    assert(c == int%d(6));\n\n", bits);
 
 	fprintf(f, "    a = int%d::max;\n", bits);
 	fprintf(f, "    b = -1;\n");
 	fprintf(f, "    c = a * b;\n");
 	fprintf(f, "    assert(a == int%d::max);\n", bits);
-	fprintf(f, "    assert(b == -1);\n");
+	fprintf(f, "    assert(b == int%d(-1));\n", bits);
 	fprintf(f, "    assert(c == int%d::min);\n", bits);
 
 	/* test div */
@@ -1510,43 +1525,43 @@ void generate_test_cpp(int bits)
 	fprintf(f, "    b = 6;\n");
 	fprintf(f, "    c = a / b;\n");
 	fprintf(f, "    r = a %% b;\n");
-	fprintf(f, "    assert(a == 10);\n");
-	fprintf(f, "    assert(b == 6);\n");
-	fprintf(f, "    assert(c == 1);\n");
-	fprintf(f, "    assert(r == 4);\n\n");
+	fprintf(f, "    assert(a == int%d(10));\n", bits);
+	fprintf(f, "    assert(b == int%d(6));\n", bits);
+	fprintf(f, "    assert(c == int%d(1));\n", bits);
+	fprintf(f, "    assert(r == int%d(4));\n\n", bits);
 
 	fprintf(f, "    a = 10;\n");
 	fprintf(f, "    b = -6;\n");
 	fprintf(f, "    c = a / b;\n");
 	fprintf(f, "    r = a %% b;\n");
-	fprintf(f, "    assert(a == 10);\n");
-	fprintf(f, "    assert(b == -6);\n");
-	fprintf(f, "    assert(c == -1);\n");
-	fprintf(f, "    assert(r == 4);\n\n");
+	fprintf(f, "    assert(a == int%d(10));\n", bits);
+	fprintf(f, "    assert(b == int%d(-6));\n", bits);
+	fprintf(f, "    assert(c == int%d(-1));\n", bits);
+	fprintf(f, "    assert(r == int%d(4));\n\n", bits);
 
 	fprintf(f, "    a = -10;\n");
 	fprintf(f, "    b = 6;\n");
 	fprintf(f, "    c = a / b;\n");
 	fprintf(f, "    r = a %% b;\n");
-	fprintf(f, "    assert(a == -10);\n");
-	fprintf(f, "    assert(b == 6);\n");
-	fprintf(f, "    assert(c == -1);\n");
-	fprintf(f, "    assert(r == -4);\n\n");
+	fprintf(f, "    assert(a == int%d(-10));\n", bits);
+	fprintf(f, "    assert(b == int%d(6));\n", bits);
+	fprintf(f, "    assert(c == int%d(-1));\n", bits);
+	fprintf(f, "    assert(r == int%d(-4));\n\n", bits);
 
 	fprintf(f, "    a = -10;\n");
 	fprintf(f, "    b = -6;\n");
 	fprintf(f, "    c = a / b;\n");
 	fprintf(f, "    r = a %% b;\n");
-	fprintf(f, "    assert(a == -10);\n");
-	fprintf(f, "    assert(b == -6);\n");
-	fprintf(f, "    assert(c == 1);\n");
-	fprintf(f, "    assert(r == -4);\n\n");
+	fprintf(f, "    assert(a == int%d(-10));\n", bits);
+	fprintf(f, "    assert(b == int%d(-6));\n", bits);
+	fprintf(f, "    assert(c == int%d(1));\n", bits);
+	fprintf(f, "    assert(r == int%d(-4));\n\n", bits);
 
 	fprintf(f, "    a = int%d::max;\n", bits);
 	fprintf(f, "    b = int%d::max;\n", bits);
 	fprintf(f, "    c = a / b;\n");
 	fprintf(f, "    r = a %% b;\n");
-	fprintf(f, "    assert(c == 1);\n\n");
+	fprintf(f, "    assert(c == int%d(1));\n\n", bits);
 	fprintf(f, "    assert(r == 0);\n\n");
 
 	fprintf(f, "    printf(\"All tests passed.\\n\");\n\n");
@@ -1579,9 +1594,9 @@ void generate_project(char c, int bits)
 	FILE* f = NULL;
 
 	if (c == 'c')
-		sprintf(s, "test_int%d_c.vcxproj", bits);
+		sprintf(s, "test_int%d.vcxproj", bits);
 	else
-		sprintf(s, "test_int%d_cpp.vcxproj", bits);
+		sprintf(s, "test_cint%d.vcxproj", bits);
 	f = fopen(s, "w");
 	if (f == NULL)
 		error("Cannot open file", s);
@@ -1603,15 +1618,20 @@ void generate_project(char c, int bits)
 
 	fprintf(f, "  </ItemGroup>\n"
 		"  <ItemGroup>\n"
-		"    <ClCompile Include=\"int%d.c\"/>\n");
+		"    <ClCompile Include=\"int%d.c\"/>\n", bits);
 	if (c == 'c')
 		fprintf(f, "    <ClCompile Include=\"test_int%d.c\"/>\n", bits);
 	else
-		fprintf(f, "    <ClCompile Include=\"test_int%d.cpp\"/>\n", bits);
-	fprintf(f, "  </ItemGroup>\n"
-		"  <ItemGroup>\n"
-		"    <ClInclude Include=\"int%d.h\"/>\n"
-		"  </ItemGroup>\n", bits, bits, bits);
+		fprintf(f, "    <ClCompile Include=\"cint%d.cpp\"/>\n"
+			"    <ClCompile Include=\"test_cint%d.cpp\"/>\n", bits, bits);
+	
+		fprintf(f, "  </ItemGroup>\n"
+			"  <ItemGroup>\n"
+			"    <ClInclude Include=\"int%d.h\"/>\n", bits);
+		
+	if (c != 'c')
+		fprintf(f, "    <ClInclude Include=\"cint%d.h\"/>\n", bits);
+	fprintf(f, "  </ItemGroup>\n");
 
 	fprintf(f, "%s",
 		"  <PropertyGroup Label=\"Globals\">\n"
