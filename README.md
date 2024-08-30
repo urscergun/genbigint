@@ -2,7 +2,7 @@
 
 Generate ASM, C and C++ source code for fixed size big integer arithmetic and bitwise operations.
 
-The generator is written in one plain C, so it can be built and ran on any platform.
+The generator is written in plain C, so it can be built and ran on any platform.
 The generated ASM code is using Intel syntax. I used NASM to assemble, but other assemblers might work just fine.
 
 There is an optional solution and project for Visual Studio 2022 for building the generator on Windows.
