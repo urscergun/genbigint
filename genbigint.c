@@ -6,10 +6,14 @@
 #pragma warning(disable : 4996) // _CRT_SECURE_NO_WARNINGS
 #endif
 
+int abi = 0; // 0: windows, 1: unix
+int bits = 0;
 
 void usage()
 {
-	printf("Usage: genbigint <bits>\n"
+	printf("Usage: genbigint [options] <bits>\n"
+		"Options:\n"
+		"  -c     calling convention (windows, unix) (default: windows)\n"
 		"  <bits> is a multiple of 64 (128, 192, 256, ...)\n");
 }
 
@@ -19,284 +23,547 @@ void error(const char* msg1, const char* msg2)
 	exit(1);
 }
 
-void generate_asm_add(FILE* f, int bits)
+void generate_asm_add(FILE* f)
 {
 	fprintf(f, "add%d:\n", bits);
-	fprintf(f, "    mov rax, [rcx]\n");
-	fprintf(f, "    add rax, [rdx]\n");
-	fprintf(f, "    mov [r8], rax\n\n");
-
-	for (int i = 8; i < bits / 8; i += 8)
+	if (abi == 0)
 	{
-		fprintf(f, "    mov rax, [rcx + %d]\n", i);
-		fprintf(f, "    adc rax, [rdx + %d]\n", i);
-		fprintf(f, "    mov [r8 + %d], rax\n\n", i);
+		fprintf(f, "    mov rax, [rcx]\n");
+		fprintf(f, "    add rax, [rdx]\n");
+		fprintf(f, "    mov [r8], rax\n\n");
+
+		for (int i = 8; i < bits / 8; i += 8)
+		{
+			fprintf(f, "    mov rax, [rcx + %d]\n", i);
+			fprintf(f, "    adc rax, [rdx + %d]\n", i);
+			fprintf(f, "    mov [r8 + %d], rax\n\n", i);
+		}
+	}
+	else
+	{
+		fprintf(f, "    mov rax, [rdi]\n");
+		fprintf(f, "    add rax, [rsi]\n");
+		fprintf(f, "    mov [rdx], rax\n\n");
+
+		for (int i = 8; i < bits / 8; i += 8)
+		{
+			fprintf(f, "    mov rax, [rdi + %d]\n", i);
+			fprintf(f, "    adc rax, [rsi + %d]\n", i);
+			fprintf(f, "    mov [rdx + %d], rax\n\n", i);
+		}
 	}
 
 	fprintf(f, "    ret\n\n");
 }
 
-void generate_asm_sub(FILE* f, int bits)
+void generate_asm_sub(FILE* f)
 {
 	fprintf(f, "sub%d:\n", bits);
-	fprintf(f, "    mov rax, [rcx]\n");
-	fprintf(f, "    sub rax, [rdx]\n");
-	fprintf(f, "    mov [r8], rax\n\n");
 
-	for (int i = 8; i < bits / 8; i += 8)
+	if (abi == 0)
 	{
-		fprintf(f, "    mov rax, [rcx + %d]\n", i);
-		fprintf(f, "    sbb rax, [rdx + %d]\n", i);
-		fprintf(f, "    mov [r8 + %d], rax\n\n", i);
+		fprintf(f, "    mov rax, [rcx]\n");
+		fprintf(f, "    sub rax, [rdx]\n");
+		fprintf(f, "    mov [r8], rax\n\n");
+
+		for (int i = 8; i < bits / 8; i += 8)
+		{
+			fprintf(f, "    mov rax, [rcx + %d]\n", i);
+			fprintf(f, "    sbb rax, [rdx + %d]\n", i);
+			fprintf(f, "    mov [r8 + %d], rax\n\n", i);
+		}
+	}
+	else
+	{	
+		fprintf(f, "    mov rax, [rdi]\n");
+		fprintf(f, "    sub rax, [rsi]\n");
+		fprintf(f, "    mov [rdx], rax\n\n");
+
+		for (int i = 8; i < bits / 8; i += 8)
+		{
+			fprintf(f, "    mov rax, [rdi + %d]\n", i);
+			fprintf(f, "    sbb rax, [rsi + %d]\n", i);
+			fprintf(f, "    mov [rdx + %d], rax\n\n", i);
+		}
 	}
 
 	fprintf(f, "    ret\n\n");
 }
 
-void generate_asm_mul(FILE* f, int bits)
+void generate_asm_mul(FILE* f)
 {
 	fprintf(f, "mul%d_1:\n", bits);
-	fprintf(f, "    push rbx\n\n");
-	fprintf(f, "    mov rax, [rcx]\n");
-	fprintf(f, "    mov rbx, rdx\n");
-	fprintf(f, "    mul rbx\n");
-	fprintf(f, "    mov [r8], rax\n");
-	fprintf(f, "    mov [r8 + 8], rdx\n\n");
 
-	for (int i = 8; i < bits / 8; i += 8)
+	if (abi == 0)
 	{
-		fprintf(f, "    mov rax, [rcx + %d]\n", i);
-		fprintf(f, "    mul rbx\n");
-		fprintf(f, "    add [r8 + %d], rax\n", i);
-		fprintf(f, "    adc rdx, 0\n");
-		if (i < bits / 8 - 8)
-			fprintf(f, "    mov [r8 + %d], rdx\n\n", i + 8);
-		else
-			fprintf(f, "    mov rax, rdx\n\n");
+		fprintf(f, "    mov rax, [rcx]\n");
+		fprintf(f, "    mov r9, rdx\n");
+		fprintf(f, "    mul r9\n");
+		fprintf(f, "    mov [r8], rax\n");
+		fprintf(f, "    mov [r8 + 8], rdx\n\n");
+
+		for (int i = 8; i < bits / 8; i += 8)
+		{
+			fprintf(f, "    mov rax, [rcx + %d]\n", i);
+			fprintf(f, "    mul r9\n");
+			fprintf(f, "    add [r8 + %d], rax\n", i);
+			fprintf(f, "    adc rdx, 0\n");
+			if (i < bits / 8 - 8)
+				fprintf(f, "    mov [r8 + %d], rdx\n\n", i + 8);
+			else
+				fprintf(f, "    mov rax, rdx\n\n");
+		}
+	}
+	else
+	{
+		fprintf(f, "    mov rax, [rdi]\n");
+		fprintf(f, "    mov r9, rdx\n");
+		fprintf(f, "    mul rsi\n");
+		fprintf(f, "    mov [r9], rax\n");
+		fprintf(f, "    mov [r9 + 8], rdx\n\n");
+
+		for (int i = 8; i < bits / 8; i += 8)
+		{
+			fprintf(f, "    mov rax, [rdi + %d]\n", i);
+			fprintf(f, "    mul rsi\n");
+			fprintf(f, "    add [r9 + %d], rax\n", i);
+			fprintf(f, "    adc rdx, 0\n");
+			if (i < bits / 8 - 8)
+				fprintf(f, "    mov [r9 + %d], rdx\n\n", i + 8);
+			else
+				fprintf(f, "    mov rax, rdx\n\n");
+		}
 	}
 
-	fprintf(f, "    pop rbx\n");
 	fprintf(f, "    ret\n\n");
 }
 
-void generate_asm_div(FILE* f, int bits)
+void generate_asm_div(FILE* f)
 {
 	fprintf(f, "div%d_1:\n", bits);
-	fprintf(f, "    push rbx\n\n");
-	fprintf(f, "    mov rax, [rcx + %d]\n", bits / 8 - 8);
-	fprintf(f, "    mov rbx, rdx\n");
-	fprintf(f, "    xor rdx, rdx\n\n");
-
-	fprintf(f, "    test    rax, rax\n");
-	fprintf(f, "    js      signed_a\n\n");
-
-	fprintf(f, "; unsigned a\n");
-	fprintf(f, "    div    rbx\n");
-	fprintf(f, "    mov    [r8 + %d], rax\n\n", bits / 8 - 8);
-
-	for (int i = bits / 8 - 16; i > 0; i -= 8)
+	if (abi == 0)
 	{
-		fprintf(f, "    mov    rax, [rcx + %d]\n", i);
+		fprintf(f, "    mov rax, [rcx + %d]\n", bits / 8 - 8);
+		fprintf(f, "    mov r9, rdx\n");
+		fprintf(f, "    xor rdx, rdx\n\n");
+
+		fprintf(f, "    test    rax, rax\n");
+		fprintf(f, "    js      signed_a\n\n");
+
+		fprintf(f, "; unsigned a\n");
+		fprintf(f, "    div    r9\n");
+		fprintf(f, "    mov    [r8 + %d], rax\n\n", bits / 8 - 8);
+
+		for (int i = bits / 8 - 16; i > 0; i -= 8)
+		{
+			fprintf(f, "    mov    rax, [rcx + %d]\n", i);
+			fprintf(f, "    div    r9\n");
+			fprintf(f, "    mov    [r8 + %d], rax\n\n", i);
+		}
+
+		fprintf(f, "    mov    rax, [rcx]\n");
+		fprintf(f, "    div    r9\n");
+		fprintf(f, "    mov    [r8], rax\n\n");
+
+		fprintf(f, "    mov    rax, rdx\n\n");
+
+		fprintf(f, "    ret\n\n");
+
+		fprintf(f, "signed_a:\n");
+		fprintf(f, "    neg    qword [rcx]\n");
+		for (int i = 8; i < bits / 8; i += 8)
+			fprintf(f, "    neg    qword [rcx + %d]\n", i);
+		fprintf(f, "\n");
+
+		fprintf(f, "    add    qword [rcx], 1\n");
+		for (int i = 8; i < bits / 8; i += 8)
+			fprintf(f, "    adc    qword [rcx + %d], 0\n", i);
+		fprintf(f, "\n");
+
+		for (int i = bits / 8 - 8; i > 0; i -= 8)
+		{
+			fprintf(f, "    mov    rax, [rcx + %d]\n", i);
+			fprintf(f, "    div    rbx\n");
+			fprintf(f, "    mov    [r8 + %d], rax\n\n", i);
+		}
+
+		fprintf(f, "    mov    rax, [rcx]\n");
 		fprintf(f, "    div    rbx\n");
-		fprintf(f, "    mov    [r8 + %d], rax\n\n", i);
+		fprintf(f, "    mov    [r8], rax\n\n");
+
+		fprintf(f, "    neg    qword [rcx]\n");
+		for (int i = 8; i < bits / 8; i += 8)
+			fprintf(f, "    neg    qword [rcx + %d]\n", i);
+		fprintf(f, "\n");
+
+		fprintf(f, "    add    qword [rcx], 1\n");
+		for (int i = 8; i < bits / 8; i += 8)
+			fprintf(f, "    adc    qword [rcx + %d], 0\n", i);
+		fprintf(f, "\n");
+
+		fprintf(f, "    neg    qword [r8]\n");
+		for (int i = 8; i < bits / 8; i += 8)
+			fprintf(f, "    neg    qword [r8 + %d]\n", i);
+		fprintf(f, "\n");
+
+		fprintf(f, "    add    qword [r8], 1\n");
+		for (int i = 8; i < bits / 8; i += 8)
+			fprintf(f, "    adc    qword [r8 + %d], 0\n", i);
+		fprintf(f, "\n");
+
+		fprintf(f, "    mov    rax, rdx\n\n");
+	}
+	else
+	{
+		fprintf(f, "    mov rax, [rdi + %d]\n", bits / 8 - 8);
+		fprintf(f, "    mov r9, rdx\n");
+		fprintf(f, "    xor rdx, rdx\n\n");
+
+		fprintf(f, "    test    rax, rax\n");
+		fprintf(f, "    js      signed_a\n\n");
+
+		fprintf(f, "; unsigned a\n");
+		fprintf(f, "    div    rsi\n");
+		fprintf(f, "    mov    [r9 + %d], rax\n\n", bits / 8 - 8);
+
+		for (int i = bits / 8 - 16; i > 0; i -= 8)
+		{
+			fprintf(f, "    mov    rax, [rdi + %d]\n", i);
+			fprintf(f, "    div    rsi\n");
+			fprintf(f, "    mov    [r9 + %d], rax\n\n", i);
+		}
+
+		fprintf(f, "    mov    rax, [rdi]\n");
+		fprintf(f, "    div    rsi\n");
+		fprintf(f, "    mov    [r9], rax\n\n");
+
+		fprintf(f, "    mov    rax, rdx\n\n");
+
+		fprintf(f, "    ret\n\n");
+
+		fprintf(f, "signed_a:\n");
+		fprintf(f, "    neg    qword [rdi]\n");
+		for (int i = 8; i < bits / 8; i += 8)
+			fprintf(f, "    neg    qword [rdi + %d]\n", i);
+		fprintf(f, "\n");
+
+		fprintf(f, "    add    qword [rdi], 1\n");
+		for (int i = 8; i < bits / 8; i += 8)
+			fprintf(f, "    adc    qword [rdi + %d], 0\n", i);
+		fprintf(f, "\n");
+
+		for (int i = bits / 8 - 8; i > 0; i -= 8)
+		{
+			fprintf(f, "    mov    rax, [rdi + %d]\n", i);
+			fprintf(f, "    div    rsi\n");
+			fprintf(f, "    mov    [r9 + %d], rax\n\n", i);
+		}
+
+		fprintf(f, "    mov    rax, [rdi]\n");
+		fprintf(f, "    div    rsi\n");
+		fprintf(f, "    mov    [r9], rax\n\n");
+
+
+		fprintf(f, "    neg    qword [rdi]\n");
+		for (int i = 8; i < bits / 8; i += 8)
+		fprintf(f, "    neg    qword [rdi + %d]\n", i);
+		fprintf(f, "\n");
+
+		fprintf(f, "    add    qword [rdi], 1\n");
+		for (int i = 8; i < bits / 8; i += 8)
+		fprintf(f, "    adc    qword [rdi + %d], 0\n", i);
+		fprintf(f, "\n");
+
+		fprintf(f, "    neg    qword [r9]\n");
+		for (int i = 8; i < bits / 8; i += 8)
+		fprintf(f, "    neg    qword [r9 + %d]\n", i);
+		fprintf(f, "\n");
+
+		fprintf(f, "    add    qword [r9], 1\n");
+		for (int i = 8; i < bits / 8; i += 8)
+		fprintf(f, "    adc    qword [r9 + %d], 0\n", i);
+		fprintf(f, "\n");
+
+		fprintf(f, "    mov    rax, rdx\n\n");
 	}
 
-	fprintf(f, "    mov    rax, [rcx]\n");
-	fprintf(f, "    div    rbx\n");
-	fprintf(f, "    mov    [r8], rax\n\n");
-
-	fprintf(f, "    mov    rax, rdx\n\n");
-
-	fprintf(f, "    pop rbx\n");
-	fprintf(f, "    ret\n\n");
-
-	fprintf(f, "signed_a:\n");
-	fprintf(f, "    neg    qword [rcx]\n");
-	for (int i = 8; i < bits / 8; i += 8)
-		fprintf(f, "    neg    qword [rcx + %d]\n", i);
-	fprintf(f, "\n");
-
-	fprintf(f, "    add    qword [rcx], 1\n");
-	for (int i = 8; i < bits / 8; i += 8)
-		fprintf(f, "    adc    qword [rcx + %d], 0\n", i);
-	fprintf(f, "\n");
-
-	for (int i = bits / 8 - 8; i > 0; i -= 8)
-	{
-		fprintf(f, "    mov    rax, [rcx + %d]\n", i);
-		fprintf(f, "    div    rbx\n");
-		fprintf(f, "    mov    [r8 + %d], rax\n\n", i);
-	}
-
-	fprintf(f, "    mov    rax, [rcx]\n");
-	fprintf(f, "    div    rbx\n");
-	fprintf(f, "    mov    [r8], rax\n\n");
-
-	fprintf(f, "    neg    qword [rcx]\n");
-	for (int i = 8; i < bits / 8; i += 8)
-		fprintf(f, "    neg    qword [rcx + %d]\n", i);
-	fprintf(f, "\n");
-
-	fprintf(f, "    add    qword [rcx], 1\n");
-	for (int i = 8; i < bits / 8; i += 8)
-		fprintf(f, "    adc    qword [rcx + %d], 0\n", i);
-	fprintf(f, "\n");
-
-	fprintf(f, "    neg    qword [r8]\n");
-	for (int i = 8; i < bits / 8; i += 8)
-		fprintf(f, "    neg    qword [r8 + %d]\n", i);
-	fprintf(f, "\n");
-
-	fprintf(f, "    add    qword [r8], 1\n");
-	for (int i = 8; i < bits / 8; i += 8)
-		fprintf(f, "    adc    qword [r8 + %d], 0\n", i);
-	fprintf(f, "\n");
-
-	fprintf(f, "    mov    rax, rdx\n\n");
-
-	fprintf(f, "    pop rbx\n");
 	fprintf(f, "    ret\n\n");
 }
 
-void generate_asm_neg(FILE* f, int bits)
+void generate_asm_neg(FILE* f)
 {
 	fprintf(f, "neg%d:\n", bits);
-	fprintf(f, "    not qword [rcx]\n");
-	for (int i = 8; i < bits / 8; i += 8)
-		fprintf(f, "    not qword [rcx + %d]\n", i);
+	if (abi == 0)
+	{
+		fprintf(f, "    not qword [rcx]\n");
+		for (int i = 8; i < bits / 8; i += 8)
+			fprintf(f, "    not qword [rcx + %d]\n", i);
 
-	fprintf(f, "    add qword [rcx], 1\n");
-	for (int i = 8; i < bits / 8; i += 8)
-		fprintf(f, "    adc qword [rcx + %d], 0\n", i);
+		fprintf(f, "    add qword [rcx], 1\n");
+		for (int i = 8; i < bits / 8; i += 8)
+			fprintf(f, "    adc qword [rcx + %d], 0\n", i);
+	}
+	else
+	{
+		fprintf(f, "    not qword [rdi]\n");
+		for (int i = 8; i < bits / 8; i += 8)
+			fprintf(f, "    not qword [rdi + %d]\n", i);
+
+		fprintf(f, "    add qword [rdi], 1\n");
+		for (int i = 8; i < bits / 8; i += 8)
+			fprintf(f, "    adc qword [rdi + %d], 0\n", i);
+	}
 
 	fprintf(f, "    ret\n\n");
 }
 
-void generate_asm_shl(FILE* f, int bits)
+void generate_asm_shl(FILE* f)
 {
 	fprintf(f, "shl%d:\n", bits);
-	fprintf(f, "    mov    r8, rcx\n");
-	fprintf(f, "    mov    cl, dl\n\n");
-
-	for (int i = bits / 8 - 8; i >= 8; i -= 8)
+	if (abi == 0)
 	{
-		if (i - 8 != 0)
-			fprintf(f, "    mov    rax, [r8 + %d]\n", i - 8);
-		else
-			fprintf(f, "    mov    rax, [r8]\n");
-		fprintf(f, "    shld   [r8 + %d], rax, cl\n\n", i);
-	}
+		fprintf(f, "    mov    r8, rcx\n");
+		fprintf(f, "    mov    cl, dl\n\n");
 
-	fprintf(f, "    shl    qword [r8], cl\n\n");
+		for (int i = bits / 8 - 8; i >= 8; i -= 8)
+		{
+			if (i - 8 != 0)
+				fprintf(f, "    mov    rax, [r8 + %d]\n", i - 8);
+			else
+				fprintf(f, "    mov    rax, [r8]\n");
+			fprintf(f, "    shld   [r8 + %d], rax, cl\n\n", i);
+		}
+
+		fprintf(f, "    shl    qword [r8], cl\n\n");
+	}
+	else
+	{
+		fprintf(f, "    mov    cl, sil\n\n");
+
+		for (int i = bits / 8 - 8; i >= 8; i -= 8)
+		{
+			if (i - 8 != 0)
+				fprintf(f, "    mov    rax, [rdi + %d]\n", i - 8);
+			else
+				fprintf(f, "    mov    rax, [rdi]\n");
+			fprintf(f, "    shld   [rdi + %d], rax, cl\n\n", i);
+		}
+
+		fprintf(f, "    shl    qword [rdi], cl\n\n");
+	}
 
 	fprintf(f, "    ret\n\n");
 }
 
-void generate_asm_shr(FILE* f, int bits)
+void generate_asm_shr(FILE* f)
 {
 	fprintf(f, "shr%d:\n", bits);
-	fprintf(f, "    mov    r8, rcx\n");
-	fprintf(f, "    mov    cl, dl\n\n");
 
-	for (int i = 8; i < bits / 8; i += 8)
+	if (abi == 0)
 	{
-		fprintf(f, "    mov    rax, [r8 + %d]\n", i);
-		if (i == 8)
-			fprintf(f, "    shrd   [r8], rax, cl\n\n");
-		else
-			fprintf(f, "    shrd   [r8 + %d], rax, cl\n\n", i - 8);
-	}
+		fprintf(f, "    mov    r8, rcx\n");
+		fprintf(f, "    mov    cl, dl\n\n");
 
-	fprintf(f, "    shr    qword [r8+%d], cl\n\n", bits / 8 - 8);
+		for (int i = 8; i < bits / 8; i += 8)
+		{
+			fprintf(f, "    mov    rax, [r8 + %d]\n", i);
+			if (i == 8)
+				fprintf(f, "    shrd   [r8], rax, cl\n\n");
+			else
+				fprintf(f, "    shrd   [r8 + %d], rax, cl\n\n", i - 8);
+		}
+
+		fprintf(f, "    shr    qword [r8+%d], cl\n\n", bits / 8 - 8);
+	}
+	else
+	{
+		fprintf(f, "    mov    cl, sil\n\n");
+
+		for (int i = 8; i < bits / 8; i += 8)
+		{
+			fprintf(f, "    mov    rax, [rdi + %d]\n", i);
+			if (i == 8)
+				fprintf(f, "    shrd   [rdi], rax, cl\n\n");
+			else
+				fprintf(f, "    shrd   [rdi + %d], rax, cl\n\n", i - 8);
+		}
+
+		fprintf(f, "    shr    qword [rdi+%d], cl\n\n", bits / 8 - 8);
+	
+	}
 
 	fprintf(f, "    ret\n\n");
 }
 
-void generate_asm_sar(FILE* f, int bits)
+void generate_asm_sar(FILE* f)
 {
 	fprintf(f, "sar%d:\n", bits);
-	fprintf(f, "    mov    r8, rcx\n");
-	fprintf(f, "    mov    cl, dl\n\n");
 
-	for (int i = 8; i < bits / 8; i += 8)
+	if (abi == 0)
 	{
-		fprintf(f, "    mov    rax, [r8 + %d]\n", i);
-		if (i == 8)
-			fprintf(f, "    shrd   [r8], rax, cl\n\n");
-		else
-			fprintf(f, "    shrd   [r8 + %d], rax, cl\n\n", i - 8);
-	}
+		fprintf(f, "    mov    r8, rcx\n");
+		fprintf(f, "    mov    cl, dl\n\n");
 
-	fprintf(f, "    sar    qword [r8+%d], cl\n\n", bits / 8 - 8);
+		for (int i = 8; i < bits / 8; i += 8)
+		{
+			fprintf(f, "    mov    rax, [r8 + %d]\n", i);
+			if (i == 8)
+				fprintf(f, "    shrd   [r8], rax, cl\n\n");
+			else
+				fprintf(f, "    shrd   [r8 + %d], rax, cl\n\n", i - 8);
+		}
+
+		fprintf(f, "    sar    qword [r8+%d], cl\n\n", bits / 8 - 8);
+	}
+	else
+	{
+		fprintf(f, "    mov    cl, sil\n\n");
+
+		for (int i = 8; i < bits / 8; i += 8)
+		{
+			fprintf(f, "    mov    rax, [rdi + %d]\n", i);
+			if (i == 8)
+				fprintf(f, "    shrd   [rdi], rax, cl\n\n");
+			else
+				fprintf(f, "    shrd   [rdi + %d], rax, cl\n\n", i - 8);
+		}
+
+		fprintf(f, "    sar    qword [rdi+%d], cl\n\n", bits / 8 - 8);
+	}
 
 	fprintf(f, "    ret\n\n");
 }
 
-void generate_asm_and(FILE* f, int bits)
+void generate_asm_and(FILE* f)
 {
 	fprintf(f, "and%d:\n", bits);
-	fprintf(f, "    mov rax, [rcx]\n");
-	fprintf(f, "    and rax, [rdx]\n");
-	fprintf(f, "    mov [r8], rax\n\n");
 
-	for (int i = 8; i < bits / 8; i += 8)
+	if (abi == 0)
 	{
-		fprintf(f, "    mov rax, [rcx + %d]\n", i);
-		fprintf(f, "    and rax, [rdx + %d]\n", i);
-		fprintf(f, "    mov [r8 + %d], rax\n\n", i);
+		fprintf(f, "    mov rax, [rcx]\n");
+		fprintf(f, "    and rax, [rdx]\n");
+		fprintf(f, "    mov [r8], rax\n\n");
+
+		for (int i = 8; i < bits / 8; i += 8)
+		{
+			fprintf(f, "    mov rax, [rcx + %d]\n", i);
+			fprintf(f, "    and rax, [rdx + %d]\n", i);
+			fprintf(f, "    mov [r8 + %d], rax\n\n", i);
+		}
+	}
+	else
+	{
+		fprintf(f, "    mov rax, [rdi]\n");
+		fprintf(f, "    and rax, [rsi]\n");
+		fprintf(f, "    mov [rdx], rax\n\n");
+
+		for (int i = 8; i < bits / 8; i += 8)
+		{
+			fprintf(f, "    mov rax, [rdi + %d]\n", i);
+			fprintf(f, "    and rax, [rsi + %d]\n", i);
+			fprintf(f, "    mov [rdx + %d], rax\n\n", i);
+		}
 	}
 
 	fprintf(f, "    ret\n\n");
 }
 
-void generate_asm_or(FILE* f, int bits)
+void generate_asm_or(FILE* f)
 {
 	fprintf(f, "or%d:\n", bits);
-	fprintf(f, "    mov rax, [rcx]\n");
-	fprintf(f, "    or rax, [rdx]\n");
-	fprintf(f, "    mov [r8], rax\n\n");
 
-	for (int i = 8; i < bits / 8; i += 8)
+	if (abi == 0)
 	{
-		fprintf(f, "    mov rax, [rcx + %d]\n", i);
-		fprintf(f, "    or rax, [rdx + %d]\n", i);
-		fprintf(f, "    mov [r8 + %d], rax\n\n", i);
+
+		fprintf(f, "    mov rax, [rcx]\n");
+		fprintf(f, "    or rax, [rdx]\n");
+		fprintf(f, "    mov [r8], rax\n\n");
+
+		for (int i = 8; i < bits / 8; i += 8)
+		{
+			fprintf(f, "    mov rax, [rcx + %d]\n", i);
+			fprintf(f, "    or rax, [rdx + %d]\n", i);
+			fprintf(f, "    mov [r8 + %d], rax\n\n", i);
+		}
+	}
+	else
+	{
+		fprintf(f, "    mov rax, [rdi]\n");
+		fprintf(f, "    or rax, [rsi]\n");
+		fprintf(f, "    mov [rdx], rax\n\n");
+
+		for (int i = 8; i < bits / 8; i += 8)
+		{
+			fprintf(f, "    mov rax, [rdi + %d]\n", i);
+			fprintf(f, "    or rax, [rsi + %d]\n", i);
+			fprintf(f, "    mov [rdx + %d], rax\n\n", i);
+		}
 	}
 
 	fprintf(f, "    ret\n\n");
 }
 
-void generate_asm_xor(FILE* f, int bits)
+void generate_asm_xor(FILE* f)
 {
 	fprintf(f, "xor%d:\n", bits);
-	fprintf(f, "    mov rax, [rcx]\n");
-	fprintf(f, "    xor rax, [rdx]\n");
-	fprintf(f, "    mov [r8], rax\n\n");
 
-	for (int i = 8; i < bits / 8; i += 8)
+	if (abi == 0)
 	{
-		fprintf(f, "    mov rax, [rcx + %d]\n", i);
-		fprintf(f, "    xor rax, [rdx + %d]\n", i);
-		fprintf(f, "    mov [r8 + %d], rax\n\n", i);
+		fprintf(f, "    mov rax, [rcx]\n");
+		fprintf(f, "    xor rax, [rdx]\n");
+		fprintf(f, "    mov [r8], rax\n\n");
+
+		for (int i = 8; i < bits / 8; i += 8)
+		{
+			fprintf(f, "    mov rax, [rcx + %d]\n", i);
+			fprintf(f, "    xor rax, [rdx + %d]\n", i);
+			fprintf(f, "    mov [r8 + %d], rax\n\n", i);
+		}
+	}
+	else
+	{
+		fprintf(f, "    mov rax, [rdi]\n");
+		fprintf(f, "    xor rax, [rsi]\n");
+		fprintf(f, "    mov [rdx], rax\n\n");
+
+		for (int i = 8; i < bits / 8; i += 8)
+		{
+			fprintf(f, "    mov rax, [rdi + %d]\n", i);
+			fprintf(f, "    xor rax, [rsi + %d]\n", i);
+			fprintf(f, "    mov [rdx + %d], rax\n\n", i);
+		}
 	}
 
 	fprintf(f, "    ret\n\n");
 }
 
-void generate_asm_not(FILE* f, int bits)
+void generate_asm_not(FILE* f)
 {
 	fprintf(f, "not%d:\n", bits);
-	fprintf(f, "    not qword [rcx]\n");
 
-	for (int i = 8; i < bits / 8; i += 8)
+	if (abi == 0)
 	{
-		fprintf(f, "    not qword [rcx + %d]\n", i);
+		fprintf(f, "    not qword [rcx]\n");
+
+		for (int i = 8; i < bits / 8; i += 8)
+		{
+			fprintf(f, "    not qword [rcx + %d]\n", i);
+		}
+	}
+	else
+	{
+		fprintf(f, "    not qword [rdi]\n");
+
+		for (int i = 8; i < bits / 8; i += 8)
+		{
+			fprintf(f, "    not qword [rdi + %d]\n", i);
+		}
 	}
 
 	fprintf(f, "    ret\n\n");
 }
 
-void generate_asm(int bits)
+void generate_asm()
 {
 	char s[128];
 	sprintf(s, "int%d.asm", bits);
@@ -306,8 +573,6 @@ void generate_asm(int bits)
 		error("Cannot open file", s);
 
 	fprintf(f, "section .text\n\n");
-
-	fprintf(f, "extern __cdecl\n\n");
 
 	fprintf(f, "global add%d\n", bits);
 	fprintf(f, "global sub%d\n", bits);
@@ -320,26 +585,26 @@ void generate_asm(int bits)
 	fprintf(f, "global and%d\n", bits);
 	fprintf(f, "global or%d\n", bits);
 	fprintf(f, "global xor%d\n", bits);
-	fprintf(f, "global not%d\n", bits);
+	fprintf(f, "global not%d\n\n", bits);
 
-	generate_asm_add(f, bits);
-	generate_asm_sub(f, bits);
-	generate_asm_mul(f, bits);
-	generate_asm_div(f, bits);
-	generate_asm_neg(f, bits);
-	generate_asm_shl(f, bits);
-	generate_asm_shr(f, bits);
-	generate_asm_sar(f, bits);
-	generate_asm_and(f, bits);
-	generate_asm_or(f, bits);
-	generate_asm_xor(f, bits);
-	generate_asm_not(f, bits);
+	generate_asm_add(f);
+	generate_asm_sub(f);
+	generate_asm_mul(f);
+	generate_asm_div(f);
+	generate_asm_neg(f);
+	generate_asm_shl(f);
+	generate_asm_shr(f);
+	generate_asm_sar(f);
+	generate_asm_and(f);
+	generate_asm_or(f);
+	generate_asm_xor(f);
+	generate_asm_not(f);
 
 	fclose(f);
 
 }
 
-void generate_c_h(int bits)
+void generate_c_h()
 {
 	char s[128];
 	sprintf(s, "int%d.h", bits);
@@ -364,21 +629,21 @@ void generate_c_h(int bits)
 	{
 		fprintf(f, "0, ");
 	}
-	fprintf(f, "0x8000000000000000 };\n");
+	fprintf(f, "(long long)0x8000000000000000 };\n");
 
 	fprintf(f, "static const INT%d INT%d_MAX = { ", bits, bits);
 	for (int i = 1; i < bits / 64; i++)
 	{
-		fprintf(f, "0xFFFFFFFFFFFFFFFF, ");
+		fprintf(f, "(long long)0xFFFFFFFFFFFFFFFF, ");
 	}
 	fprintf(f, " 0x7FFFFFFFFFFFFFFF };\n\n");
 
 	fprintf(f, "static const INT%d INT%d_ZERO = { ", bits, bits);
 	for (int i = 1; i < bits / 64; i++)
 	{
-		fprintf(f, "0, ");
+		fprintf(f, "0ll, ");
 	}
-	fprintf(f, " 0 };\n\n");
+	fprintf(f, " 0ll };\n\n");
 
 	fprintf(f, "/* a = i */\n");
 	fprintf(f, "void assign%d(INT%d a, long long i);\n\n", bits, bits);
@@ -450,7 +715,7 @@ void generate_c_h(int bits)
 	fclose(f);
 }
 
-void generate_c(int bits)
+void generate_c()
 {
 	char s[128];
 	FILE* f = NULL;
@@ -737,7 +1002,7 @@ void generate_c(int bits)
 	fclose(f);
 }
 
-void generate_cpp(int bits)
+void generate_cpp()
 {
 	char s[128];
 	FILE* f = NULL;
@@ -1065,7 +1330,7 @@ void generate_cpp(int bits)
 	fclose(f);
 }
 
-void generate_test_c(int bits)
+void generate_test_c()
 {
 	char s[128];
 	FILE* f = NULL;
@@ -1382,7 +1647,7 @@ void generate_test_c(int bits)
 	fclose(f);
 }
 
-void generate_test_cpp(int bits)
+void generate_test_cpp()
 {
 	char s[128];
 	FILE* f = NULL;
@@ -1512,10 +1777,10 @@ void generate_test_cpp(int bits)
 
 	fprintf(f, "    a = int%d::max;\n", bits);
 	fprintf(f, "    b = -1;\n");
-	fprintf(f, "    c = a * b;\n");
+	fprintf(f, "    c = a * b - int%d(1);\n", bits);
 	fprintf(f, "    assert(a == int%d::max);\n", bits);
 	fprintf(f, "    assert(b == int%d(-1));\n", bits);
-	fprintf(f, "    assert(c == int%d::min);\n", bits);
+	fprintf(f, "    assert(c == int%d::min);\n\n", bits);
 
 	/* test div */
 
@@ -1562,7 +1827,7 @@ void generate_test_cpp(int bits)
 	fprintf(f, "    c = a / b;\n");
 	fprintf(f, "    r = a %% b;\n");
 	fprintf(f, "    assert(c == int%d(1));\n\n", bits);
-	fprintf(f, "    assert(r == 0);\n\n");
+	fprintf(f, "    assert(r == int%d(0ll));\n\n", bits);
 
 	fprintf(f, "    printf(\"All tests passed.\\n\");\n\n");
 
@@ -1574,7 +1839,7 @@ void generate_test_cpp(int bits)
 	fclose(f);
 }
 
-void generate_project_custom_build(FILE* f, int bits)
+void generate_project_custom_build(FILE* f)
 {
 	char s[128];
 	sprintf(s, "int%d", bits);
@@ -1588,7 +1853,7 @@ void generate_project_custom_build(FILE* f, int bits)
 		"    </CustomBuild>\n");
 }
 
-void generate_project(char c, int bits)
+void generate_project(char c)
 {
 	char s[128];
 	FILE* f = NULL;
@@ -1614,7 +1879,7 @@ void generate_project(char c, int bits)
 		"  </ItemGroup>\n"
 		"  <ItemGroup>\n");
 
-	generate_project_custom_build(f, bits);
+	generate_project_custom_build(f);
 
 	fprintf(f, "  </ItemGroup>\n"
 		"  <ItemGroup>\n"
@@ -1704,28 +1969,49 @@ void generate_project(char c, int bits)
 
 int main(int argc, char** argv)
 {
-	if (argc != 2)
+	int i = 1;
+
+	while (i < argc)
 	{
-		usage();
-		return 1;
+		if (strcmp(argv[i], "-c") == 0)
+		{
+			i++;
+			if (i >= argc)
+			{
+				usage();
+				return 1;
+			}
+			if (strcmp(argv[i], "windows") == 0)
+				abi = 0;
+			else if (strcmp(argv[i], "unix") == 0)
+				abi = 1;
+			else
+			{
+				usage();
+				return 1;
+			}
+			i++;
+		}
+		
+		bits = atoi(argv[i]);
+		i++;
 	}
 
-	int bits = atoi(argv[1]);
 	if (bits < 128 || bits % 64 != 0)
 	{
 		usage();
 		return 2;
 	}
 
-	generate_asm(bits);
-	generate_c(bits);
-	generate_cpp(bits);
+	generate_asm();
+	generate_c();
+	generate_cpp();
 
-	generate_test_c(bits);
-	generate_project('c', bits);
+	generate_test_c();
+	generate_project('c');
 
-	generate_test_cpp(bits);
-	generate_project('x', bits);
+	generate_test_cpp();
+	generate_project('x');
 
 	return 0;
 }
