@@ -568,6 +568,8 @@ void generate_asm()
 	char s[128];
 	sprintf(s, "int%d.asm", bits);
 
+	printf("generating %s\n", s);
+
 	FILE* f = fopen(s, "w");
 	if (f == NULL)
 		error("Cannot open file", s);
@@ -586,6 +588,19 @@ void generate_asm()
 	fprintf(f, "global or%d\n", bits);
 	fprintf(f, "global xor%d\n", bits);
 	fprintf(f, "global not%d\n\n", bits);
+
+	fprintf(f, "export add%d\n", bits);
+	fprintf(f, "export sub%d\n", bits);
+	fprintf(f, "export mul%d_1\n", bits);
+	fprintf(f, "export div%d_1\n", bits);
+	fprintf(f, "export neg%d\n", bits);
+	fprintf(f, "export shl%d\n", bits);
+	fprintf(f, "export shr%d\n", bits);
+	fprintf(f, "export sar%d\n", bits);
+	fprintf(f, "export and%d\n", bits);
+	fprintf(f, "export or%d\n", bits);
+	fprintf(f, "export xor%d\n", bits);
+	fprintf(f, "export not%d\n\n", bits);
 
 	generate_asm_add(f);
 	generate_asm_sub(f);
@@ -608,6 +623,8 @@ void generate_c_h()
 {
 	char s[128];
 	sprintf(s, "int%d.h", bits);
+
+	printf("generating %s\n", s);
 
 	FILE* f = fopen(s, "w");
 	if (f == NULL)
@@ -724,6 +741,9 @@ void generate_c()
 	generate_c_h(bits);
 
 	sprintf(s, "int%d.c", bits);
+
+	printf("generating %s\n", s);
+
 	f = fopen(s, "w");
 	if (f == NULL)
 		error("Cannot open file", s);
@@ -1008,6 +1028,9 @@ void generate_cpp()
 	FILE* f = NULL;
 
 	sprintf(s, "cint%d.h", bits);
+
+	printf("generating %s\n", s);
+
 	f = fopen(s, "w");
 	if (f == NULL)
 		error("Cannot open file", s);
@@ -1079,6 +1102,9 @@ void generate_cpp()
 	fprintf(f, "};\n");
 
 	sprintf(s, "cint%d.cpp", bits);
+
+	printf("generating %s\n", s);
+
 	f = fopen(s, "w");
 	if (f == NULL)
 		error("Cannot open file", s);
@@ -1336,6 +1362,9 @@ void generate_test_c()
 	FILE* f = NULL;
 
 	sprintf(s, "test_int%d.c", bits);
+
+	printf("generating %s\n", s);
+
 	f = fopen(s, "w");
 	if (f == NULL)
 		error("Cannot open file", s);
@@ -1653,6 +1682,9 @@ void generate_test_cpp()
 	FILE* f = NULL;
 
 	sprintf(s, "test_cint%d.cpp", bits);
+
+	printf("generating %s\n", s);
+
 	f = fopen(s, "w");
 	if (f == NULL)
 		error("Cannot open file", s);
@@ -1862,6 +1894,9 @@ void generate_project(char c)
 		sprintf(s, "test_int%d.vcxproj", bits);
 	else
 		sprintf(s, "test_cint%d.vcxproj", bits);
+
+	printf("generating %s\n", s);
+
 	f = fopen(s, "w");
 	if (f == NULL)
 		error("Cannot open file", s);
