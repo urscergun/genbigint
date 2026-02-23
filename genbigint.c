@@ -147,10 +147,6 @@ void generate_asm_div(FILE* f)
 		fprintf(f, "    mov r9, rdx\n");
 		fprintf(f, "    xor rdx, rdx\n\n");
 
-		fprintf(f, "    test    rax, rax\n");
-		fprintf(f, "    js      signed_a\n\n");
-
-		fprintf(f, "; unsigned a\n");
 		fprintf(f, "    div    r9\n");
 		fprintf(f, "    mov    [r8 + %d], rax\n\n", bits / 8 - 8);
 
@@ -164,54 +160,6 @@ void generate_asm_div(FILE* f)
 		fprintf(f, "    mov    rax, [rcx]\n");
 		fprintf(f, "    div    r9\n");
 		fprintf(f, "    mov    [r8], rax\n\n");
-
-		fprintf(f, "    mov    rax, rdx\n\n");
-
-		fprintf(f, "    ret\n\n");
-
-		fprintf(f, "signed_a:\n");
-		fprintf(f, "    neg    qword [rcx]\n");
-		for (int i = 8; i < bits / 8; i += 8)
-			fprintf(f, "    neg    qword [rcx + %d]\n", i);
-		fprintf(f, "\n");
-
-		fprintf(f, "    add    qword [rcx], 1\n");
-		for (int i = 8; i < bits / 8; i += 8)
-			fprintf(f, "    adc    qword [rcx + %d], 0\n", i);
-		fprintf(f, "\n");
-
-		for (int i = bits / 8 - 8; i > 0; i -= 8)
-		{
-			fprintf(f, "    mov    rax, [rcx + %d]\n", i);
-			fprintf(f, "    div    rbx\n");
-			fprintf(f, "    mov    [r8 + %d], rax\n\n", i);
-		}
-
-		fprintf(f, "    mov    rax, [rcx]\n");
-		fprintf(f, "    div    rbx\n");
-		fprintf(f, "    mov    [r8], rax\n\n");
-
-		fprintf(f, "    neg    qword [rcx]\n");
-		for (int i = 8; i < bits / 8; i += 8)
-			fprintf(f, "    neg    qword [rcx + %d]\n", i);
-		fprintf(f, "\n");
-
-		fprintf(f, "    add    qword [rcx], 1\n");
-		for (int i = 8; i < bits / 8; i += 8)
-			fprintf(f, "    adc    qword [rcx + %d], 0\n", i);
-		fprintf(f, "\n");
-
-		fprintf(f, "    neg    qword [r8]\n");
-		for (int i = 8; i < bits / 8; i += 8)
-			fprintf(f, "    neg    qword [r8 + %d]\n", i);
-		fprintf(f, "\n");
-
-		fprintf(f, "    add    qword [r8], 1\n");
-		for (int i = 8; i < bits / 8; i += 8)
-			fprintf(f, "    adc    qword [r8 + %d], 0\n", i);
-		fprintf(f, "\n");
-
-		fprintf(f, "    mov    rax, rdx\n\n");
 	}
 	else
 	{
@@ -219,10 +167,6 @@ void generate_asm_div(FILE* f)
 		fprintf(f, "    mov r9, rdx\n");
 		fprintf(f, "    xor rdx, rdx\n\n");
 
-		fprintf(f, "    test    rax, rax\n");
-		fprintf(f, "    js      signed_a\n\n");
-
-		fprintf(f, "; unsigned a\n");
 		fprintf(f, "    div    rsi\n");
 		fprintf(f, "    mov    [r9 + %d], rax\n\n", bits / 8 - 8);
 
@@ -236,57 +180,9 @@ void generate_asm_div(FILE* f)
 		fprintf(f, "    mov    rax, [rdi]\n");
 		fprintf(f, "    div    rsi\n");
 		fprintf(f, "    mov    [r9], rax\n\n");
-
-		fprintf(f, "    mov    rax, rdx\n\n");
-
-		fprintf(f, "    ret\n\n");
-
-		fprintf(f, "signed_a:\n");
-		fprintf(f, "    neg    qword [rdi]\n");
-		for (int i = 8; i < bits / 8; i += 8)
-			fprintf(f, "    neg    qword [rdi + %d]\n", i);
-		fprintf(f, "\n");
-
-		fprintf(f, "    add    qword [rdi], 1\n");
-		for (int i = 8; i < bits / 8; i += 8)
-			fprintf(f, "    adc    qword [rdi + %d], 0\n", i);
-		fprintf(f, "\n");
-
-		for (int i = bits / 8 - 8; i > 0; i -= 8)
-		{
-			fprintf(f, "    mov    rax, [rdi + %d]\n", i);
-			fprintf(f, "    div    rsi\n");
-			fprintf(f, "    mov    [r9 + %d], rax\n\n", i);
-		}
-
-		fprintf(f, "    mov    rax, [rdi]\n");
-		fprintf(f, "    div    rsi\n");
-		fprintf(f, "    mov    [r9], rax\n\n");
-
-
-		fprintf(f, "    neg    qword [rdi]\n");
-		for (int i = 8; i < bits / 8; i += 8)
-		fprintf(f, "    neg    qword [rdi + %d]\n", i);
-		fprintf(f, "\n");
-
-		fprintf(f, "    add    qword [rdi], 1\n");
-		for (int i = 8; i < bits / 8; i += 8)
-		fprintf(f, "    adc    qword [rdi + %d], 0\n", i);
-		fprintf(f, "\n");
-
-		fprintf(f, "    neg    qword [r9]\n");
-		for (int i = 8; i < bits / 8; i += 8)
-		fprintf(f, "    neg    qword [r9 + %d]\n", i);
-		fprintf(f, "\n");
-
-		fprintf(f, "    add    qword [r9], 1\n");
-		for (int i = 8; i < bits / 8; i += 8)
-		fprintf(f, "    adc    qword [r9 + %d], 0\n", i);
-		fprintf(f, "\n");
-
-		fprintf(f, "    mov    rax, rdx\n\n");
 	}
 
+	fprintf(f, "    mov    rax, rdx\n\n");
 	fprintf(f, "    ret\n\n");
 }
 
@@ -589,18 +485,22 @@ void generate_asm()
 	fprintf(f, "global xor%d\n", bits);
 	fprintf(f, "global not%d\n\n", bits);
 
-	fprintf(f, "export add%d\n", bits);
-	fprintf(f, "export sub%d\n", bits);
-	fprintf(f, "export mul%d_1\n", bits);
-	fprintf(f, "export div%d_1\n", bits);
-	fprintf(f, "export neg%d\n", bits);
-	fprintf(f, "export shl%d\n", bits);
-	fprintf(f, "export shr%d\n", bits);
-	fprintf(f, "export sar%d\n", bits);
-	fprintf(f, "export and%d\n", bits);
-	fprintf(f, "export or%d\n", bits);
-	fprintf(f, "export xor%d\n", bits);
-	fprintf(f, "export not%d\n\n", bits);
+	if (abi == 0) /* export directive is Windows/PE only */
+	{
+		fprintf(f, "export add%d\n", bits);
+		fprintf(f, "export sub%d\n", bits);
+		fprintf(f, "export mul%d_1\n", bits);
+		fprintf(f, "export div%d_1\n", bits);
+		fprintf(f, "export neg%d\n", bits);
+		fprintf(f, "export shl%d\n", bits);
+		fprintf(f, "export shr%d\n", bits);
+		fprintf(f, "export sar%d\n", bits);
+		fprintf(f, "export and%d\n", bits);
+		fprintf(f, "export or%d\n", bits);
+		fprintf(f, "export xor%d\n", bits);
+		fprintf(f, "export not%d\n", bits);
+	}
+	fprintf(f, "\n");
 
 	generate_asm_add(f);
 	generate_asm_sub(f);
@@ -614,6 +514,9 @@ void generate_asm()
 	generate_asm_or(f);
 	generate_asm_xor(f);
 	generate_asm_not(f);
+
+	if (abi == 1) /* Linux elf64: mark stack as non-executable */
+		fprintf(f, "section .note.GNU-stack noalloc noexec nowrite progbits\n");
 
 	fclose(f);
 
@@ -684,12 +587,14 @@ void generate_c_h()
 	fprintf(f, "void sub%d(INT%d a, INT%d b, INT%d c);\n\n", bits, bits, bits, bits);
 
 	fprintf(f, "/* c = a * i */\n");
+	fprintf(f, "/* a >= 0, i >= 0 */\n");
 	fprintf(f, "void mul%d_1(INT%d a, long long i, INT%d c);\n\n", bits, bits, bits);
 
 	fprintf(f, "/* c = a * b */\n");
 	fprintf(f, "void mul%d(INT%d a, INT%d b, INT%d c);\n\n", bits, bits, bits, bits);
 
 	fprintf(f, "/* c = a / i (r = remainder) */\n");
+	fprintf(f, "/* a >= 0, i > 0 */\n");
 	fprintf(f, "long long div%d_1(INT%d a, long long i, INT%d c);\n\n", bits, bits, bits);
 
 	fprintf(f, "/* c = a / b (r = remainder) */\n");
