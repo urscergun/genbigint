@@ -11,2512 +11,2514 @@ int bits = 0;
 
 void usage()
 {
-	printf("Usage: genbigint [options] <bits>\n"
-		"Options:\n"
-		"  -c     calling convention (windows, unix) (default: windows)\n"
-		"  <bits> is a multiple of 64 (128, 192, 256, ...)\n");
+    printf("Usage: genbigint [options] <bits>\n"
+        "Options:\n"
+        "  -c     calling convention (windows, unix) (default: windows)\n"
+        "  <bits> is a multiple of 64 (128, 192, 256, ...)\n");
 }
 
 void error(const char* msg1, const char* msg2)
 {
-	printf("Error: %s %s\n", msg1, msg2);
-	exit(1);
+    printf("Error: %s %s\n", msg1, msg2);
+    exit(1);
 }
 
 void generate_asm_add(FILE* f)
 {
-	fprintf(f, "add%d:\n", bits);
-	if (abi == 0)
-	{
-		fprintf(f, "    mov rax, [rcx]\n");
-		fprintf(f, "    add rax, [rdx]\n");
-		fprintf(f, "    mov [r8], rax\n\n");
+    fprintf(f, "add%d:\n", bits);
+    if (abi == 0)
+    {
+        fprintf(f, "    mov rax, [rcx]\n");
+        fprintf(f, "    add rax, [rdx]\n");
+        fprintf(f, "    mov [r8], rax\n\n");
 
-		for (int i = 8; i < bits / 8; i += 8)
-		{
-			fprintf(f, "    mov rax, [rcx + %d]\n", i);
-			fprintf(f, "    adc rax, [rdx + %d]\n", i);
-			fprintf(f, "    mov [r8 + %d], rax\n\n", i);
-		}
-	}
-	else
-	{
-		fprintf(f, "    mov rax, [rdi]\n");
-		fprintf(f, "    add rax, [rsi]\n");
-		fprintf(f, "    mov [rdx], rax\n\n");
+        for (int i = 8; i < bits / 8; i += 8)
+        {
+            fprintf(f, "    mov rax, [rcx + %d]\n", i);
+            fprintf(f, "    adc rax, [rdx + %d]\n", i);
+            fprintf(f, "    mov [r8 + %d], rax\n\n", i);
+        }
+    }
+    else
+    {
+        fprintf(f, "    mov rax, [rdi]\n");
+        fprintf(f, "    add rax, [rsi]\n");
+        fprintf(f, "    mov [rdx], rax\n\n");
 
-		for (int i = 8; i < bits / 8; i += 8)
-		{
-			fprintf(f, "    mov rax, [rdi + %d]\n", i);
-			fprintf(f, "    adc rax, [rsi + %d]\n", i);
-			fprintf(f, "    mov [rdx + %d], rax\n\n", i);
-		}
-	}
+        for (int i = 8; i < bits / 8; i += 8)
+        {
+            fprintf(f, "    mov rax, [rdi + %d]\n", i);
+            fprintf(f, "    adc rax, [rsi + %d]\n", i);
+            fprintf(f, "    mov [rdx + %d], rax\n\n", i);
+        }
+    }
 
-	fprintf(f, "    ret\n\n");
+    fprintf(f, "    ret\n\n");
 }
 
 void generate_asm_sub(FILE* f)
 {
-	fprintf(f, "sub%d:\n", bits);
+    fprintf(f, "sub%d:\n", bits);
 
-	if (abi == 0)
-	{
-		fprintf(f, "    mov rax, [rcx]\n");
-		fprintf(f, "    sub rax, [rdx]\n");
-		fprintf(f, "    mov [r8], rax\n\n");
+    if (abi == 0)
+    {
+        fprintf(f, "    mov rax, [rcx]\n");
+        fprintf(f, "    sub rax, [rdx]\n");
+        fprintf(f, "    mov [r8], rax\n\n");
 
-		for (int i = 8; i < bits / 8; i += 8)
-		{
-			fprintf(f, "    mov rax, [rcx + %d]\n", i);
-			fprintf(f, "    sbb rax, [rdx + %d]\n", i);
-			fprintf(f, "    mov [r8 + %d], rax\n\n", i);
-		}
-	}
-	else
-	{	
-		fprintf(f, "    mov rax, [rdi]\n");
-		fprintf(f, "    sub rax, [rsi]\n");
-		fprintf(f, "    mov [rdx], rax\n\n");
+        for (int i = 8; i < bits / 8; i += 8)
+        {
+            fprintf(f, "    mov rax, [rcx + %d]\n", i);
+            fprintf(f, "    sbb rax, [rdx + %d]\n", i);
+            fprintf(f, "    mov [r8 + %d], rax\n\n", i);
+        }
+    }
+    else
+    {   
+        fprintf(f, "    mov rax, [rdi]\n");
+        fprintf(f, "    sub rax, [rsi]\n");
+        fprintf(f, "    mov [rdx], rax\n\n");
 
-		for (int i = 8; i < bits / 8; i += 8)
-		{
-			fprintf(f, "    mov rax, [rdi + %d]\n", i);
-			fprintf(f, "    sbb rax, [rsi + %d]\n", i);
-			fprintf(f, "    mov [rdx + %d], rax\n\n", i);
-		}
-	}
+        for (int i = 8; i < bits / 8; i += 8)
+        {
+            fprintf(f, "    mov rax, [rdi + %d]\n", i);
+            fprintf(f, "    sbb rax, [rsi + %d]\n", i);
+            fprintf(f, "    mov [rdx + %d], rax\n\n", i);
+        }
+    }
 
-	fprintf(f, "    ret\n\n");
+    fprintf(f, "    ret\n\n");
 }
 
 void generate_asm_mul(FILE* f)
 {
-	fprintf(f, "mul%d_1:\n", bits);
+    fprintf(f, "mul%d_1:\n", bits);
 
-	if (abi == 0)
-	{
-		fprintf(f, "    mov rax, [rcx]\n");
-		fprintf(f, "    mov r9, rdx\n");
-		fprintf(f, "    mul r9\n");
-		fprintf(f, "    mov [r8], rax\n");
-		fprintf(f, "    mov [r8 + 8], rdx\n\n");
+    if (abi == 0)
+    {
+        fprintf(f, "    mov rax, [rcx]\n");
+        fprintf(f, "    mov r9, rdx\n");
+        fprintf(f, "    mul r9\n");
+        fprintf(f, "    mov [r8], rax\n");
+        fprintf(f, "    mov [r8 + 8], rdx\n\n");
 
-		for (int i = 8; i < bits / 8; i += 8)
-		{
-			fprintf(f, "    mov rax, [rcx + %d]\n", i);
-			fprintf(f, "    mul r9\n");
-			fprintf(f, "    add [r8 + %d], rax\n", i);
-			fprintf(f, "    adc rdx, 0\n");
-			if (i < bits / 8 - 8)
-				fprintf(f, "    mov [r8 + %d], rdx\n\n", i + 8);
-			else
-				fprintf(f, "    mov rax, rdx\n\n");
-		}
-	}
-	else
-	{
-		fprintf(f, "    mov rax, [rdi]\n");
-		fprintf(f, "    mov r9, rdx\n");
-		fprintf(f, "    mul rsi\n");
-		fprintf(f, "    mov [r9], rax\n");
-		fprintf(f, "    mov [r9 + 8], rdx\n\n");
+        for (int i = 8; i < bits / 8; i += 8)
+        {
+            fprintf(f, "    mov rax, [rcx + %d]\n", i);
+            fprintf(f, "    mul r9\n");
+            fprintf(f, "    add [r8 + %d], rax\n", i);
+            fprintf(f, "    adc rdx, 0\n");
+            if (i < bits / 8 - 8)
+                fprintf(f, "    mov [r8 + %d], rdx\n\n", i + 8);
+            else
+                fprintf(f, "    mov rax, rdx\n\n");
+        }
+    }
+    else
+    {
+        fprintf(f, "    mov rax, [rdi]\n");
+        fprintf(f, "    mov r9, rdx\n");
+        fprintf(f, "    mul rsi\n");
+        fprintf(f, "    mov [r9], rax\n");
+        fprintf(f, "    mov [r9 + 8], rdx\n\n");
 
-		for (int i = 8; i < bits / 8; i += 8)
-		{
-			fprintf(f, "    mov rax, [rdi + %d]\n", i);
-			fprintf(f, "    mul rsi\n");
-			fprintf(f, "    add [r9 + %d], rax\n", i);
-			fprintf(f, "    adc rdx, 0\n");
-			if (i < bits / 8 - 8)
-				fprintf(f, "    mov [r9 + %d], rdx\n\n", i + 8);
-			else
-				fprintf(f, "    mov rax, rdx\n\n");
-		}
-	}
+        for (int i = 8; i < bits / 8; i += 8)
+        {
+            fprintf(f, "    mov rax, [rdi + %d]\n", i);
+            fprintf(f, "    mul rsi\n");
+            fprintf(f, "    add [r9 + %d], rax\n", i);
+            fprintf(f, "    adc rdx, 0\n");
+            if (i < bits / 8 - 8)
+                fprintf(f, "    mov [r9 + %d], rdx\n\n", i + 8);
+            else
+                fprintf(f, "    mov rax, rdx\n\n");
+        }
+    }
 
-	fprintf(f, "    ret\n\n");
+    fprintf(f, "    ret\n\n");
 }
 
 void generate_asm_div(FILE* f)
 {
-	fprintf(f, "div%d_1:\n", bits);
-	if (abi == 0)
-	{
-		fprintf(f, "    mov rax, [rcx + %d]\n", bits / 8 - 8);
-		fprintf(f, "    mov r9, rdx\n");
-		fprintf(f, "    xor rdx, rdx\n\n");
+    fprintf(f, "div%d_1:\n", bits);
+    if (abi == 0)
+    {
+        fprintf(f, "    mov rax, [rcx + %d]\n", bits / 8 - 8);
+        fprintf(f, "    mov r9, rdx\n");
+        fprintf(f, "    xor rdx, rdx\n\n");
 
-		fprintf(f, "    div    r9\n");
-		fprintf(f, "    mov    [r8 + %d], rax\n\n", bits / 8 - 8);
+        fprintf(f, "    div    r9\n");
+        fprintf(f, "    mov    [r8 + %d], rax\n\n", bits / 8 - 8);
 
-		for (int i = bits / 8 - 16; i > 0; i -= 8)
-		{
-			fprintf(f, "    mov    rax, [rcx + %d]\n", i);
-			fprintf(f, "    div    r9\n");
-			fprintf(f, "    mov    [r8 + %d], rax\n\n", i);
-		}
+        for (int i = bits / 8 - 16; i > 0; i -= 8)
+        {
+            fprintf(f, "    mov    rax, [rcx + %d]\n", i);
+            fprintf(f, "    div    r9\n");
+            fprintf(f, "    mov    [r8 + %d], rax\n\n", i);
+        }
 
-		fprintf(f, "    mov    rax, [rcx]\n");
-		fprintf(f, "    div    r9\n");
-		fprintf(f, "    mov    [r8], rax\n\n");
-	}
-	else
-	{
-		fprintf(f, "    mov rax, [rdi + %d]\n", bits / 8 - 8);
-		fprintf(f, "    mov r9, rdx\n");
-		fprintf(f, "    xor rdx, rdx\n\n");
+        fprintf(f, "    mov    rax, [rcx]\n");
+        fprintf(f, "    div    r9\n");
+        fprintf(f, "    mov    [r8], rax\n\n");
+    }
+    else
+    {
+        fprintf(f, "    mov rax, [rdi + %d]\n", bits / 8 - 8);
+        fprintf(f, "    mov r9, rdx\n");
+        fprintf(f, "    xor rdx, rdx\n\n");
 
-		fprintf(f, "    div    rsi\n");
-		fprintf(f, "    mov    [r9 + %d], rax\n\n", bits / 8 - 8);
+        fprintf(f, "    div    rsi\n");
+        fprintf(f, "    mov    [r9 + %d], rax\n\n", bits / 8 - 8);
 
-		for (int i = bits / 8 - 16; i > 0; i -= 8)
-		{
-			fprintf(f, "    mov    rax, [rdi + %d]\n", i);
-			fprintf(f, "    div    rsi\n");
-			fprintf(f, "    mov    [r9 + %d], rax\n\n", i);
-		}
+        for (int i = bits / 8 - 16; i > 0; i -= 8)
+        {
+            fprintf(f, "    mov    rax, [rdi + %d]\n", i);
+            fprintf(f, "    div    rsi\n");
+            fprintf(f, "    mov    [r9 + %d], rax\n\n", i);
+        }
 
-		fprintf(f, "    mov    rax, [rdi]\n");
-		fprintf(f, "    div    rsi\n");
-		fprintf(f, "    mov    [r9], rax\n\n");
-	}
+        fprintf(f, "    mov    rax, [rdi]\n");
+        fprintf(f, "    div    rsi\n");
+        fprintf(f, "    mov    [r9], rax\n\n");
+    }
 
-	fprintf(f, "    mov    rax, rdx\n\n");
-	fprintf(f, "    ret\n\n");
+    fprintf(f, "    mov    rax, rdx\n\n");
+    fprintf(f, "    ret\n\n");
 }
 
 void generate_asm_neg(FILE* f)
 {
-	fprintf(f, "neg%d:\n", bits);
-	if (abi == 0)
-	{
-		fprintf(f, "    not qword [rcx]\n");
-		for (int i = 8; i < bits / 8; i += 8)
-			fprintf(f, "    not qword [rcx + %d]\n", i);
+    fprintf(f, "neg%d:\n", bits);
+    if (abi == 0)
+    {
+        fprintf(f, "    not qword [rcx]\n");
+        for (int i = 8; i < bits / 8; i += 8)
+            fprintf(f, "    not qword [rcx + %d]\n", i);
 
-		fprintf(f, "    add qword [rcx], 1\n");
-		for (int i = 8; i < bits / 8; i += 8)
-			fprintf(f, "    adc qword [rcx + %d], 0\n", i);
-	}
-	else
-	{
-		fprintf(f, "    not qword [rdi]\n");
-		for (int i = 8; i < bits / 8; i += 8)
-			fprintf(f, "    not qword [rdi + %d]\n", i);
+        fprintf(f, "    add qword [rcx], 1\n");
+        for (int i = 8; i < bits / 8; i += 8)
+            fprintf(f, "    adc qword [rcx + %d], 0\n", i);
+    }
+    else
+    {
+        fprintf(f, "    not qword [rdi]\n");
+        for (int i = 8; i < bits / 8; i += 8)
+            fprintf(f, "    not qword [rdi + %d]\n", i);
 
-		fprintf(f, "    add qword [rdi], 1\n");
-		for (int i = 8; i < bits / 8; i += 8)
-			fprintf(f, "    adc qword [rdi + %d], 0\n", i);
-	}
+        fprintf(f, "    add qword [rdi], 1\n");
+        for (int i = 8; i < bits / 8; i += 8)
+            fprintf(f, "    adc qword [rdi + %d], 0\n", i);
+    }
 
-	fprintf(f, "    ret\n\n");
+    fprintf(f, "    ret\n\n");
 }
 
 void generate_asm_shl(FILE* f)
 {
-	fprintf(f, "shl%d:\n", bits);
-	if (abi == 0)
-	{
-		fprintf(f, "    mov    r8, rcx\n");
-		fprintf(f, "    mov    cl, dl\n\n");
+    fprintf(f, "shl%d:\n", bits);
+    if (abi == 0)
+    {
+        fprintf(f, "    mov    r8, rcx\n");
+        fprintf(f, "    mov    cl, dl\n\n");
 
-		for (int i = bits / 8 - 8; i >= 8; i -= 8)
-		{
-			if (i - 8 != 0)
-				fprintf(f, "    mov    rax, [r8 + %d]\n", i - 8);
-			else
-				fprintf(f, "    mov    rax, [r8]\n");
-			fprintf(f, "    shld   [r8 + %d], rax, cl\n\n", i);
-		}
+        for (int i = bits / 8 - 8; i >= 8; i -= 8)
+        {
+            if (i - 8 != 0)
+                fprintf(f, "    mov    rax, [r8 + %d]\n", i - 8);
+            else
+                fprintf(f, "    mov    rax, [r8]\n");
+            fprintf(f, "    shld   [r8 + %d], rax, cl\n\n", i);
+        }
 
-		fprintf(f, "    shl    qword [r8], cl\n\n");
-	}
-	else
-	{
-		fprintf(f, "    mov    cl, sil\n\n");
+        fprintf(f, "    shl    qword [r8], cl\n\n");
+    }
+    else
+    {
+        fprintf(f, "    mov    cl, sil\n\n");
 
-		for (int i = bits / 8 - 8; i >= 8; i -= 8)
-		{
-			if (i - 8 != 0)
-				fprintf(f, "    mov    rax, [rdi + %d]\n", i - 8);
-			else
-				fprintf(f, "    mov    rax, [rdi]\n");
-			fprintf(f, "    shld   [rdi + %d], rax, cl\n\n", i);
-		}
+        for (int i = bits / 8 - 8; i >= 8; i -= 8)
+        {
+            if (i - 8 != 0)
+                fprintf(f, "    mov    rax, [rdi + %d]\n", i - 8);
+            else
+                fprintf(f, "    mov    rax, [rdi]\n");
+            fprintf(f, "    shld   [rdi + %d], rax, cl\n\n", i);
+        }
 
-		fprintf(f, "    shl    qword [rdi], cl\n\n");
-	}
+        fprintf(f, "    shl    qword [rdi], cl\n\n");
+    }
 
-	fprintf(f, "    ret\n\n");
+    fprintf(f, "    ret\n\n");
 }
 
 void generate_asm_shr(FILE* f)
 {
-	fprintf(f, "shr%d:\n", bits);
+    fprintf(f, "shr%d:\n", bits);
 
-	if (abi == 0)
-	{
-		fprintf(f, "    mov    r8, rcx\n");
-		fprintf(f, "    mov    cl, dl\n\n");
+    if (abi == 0)
+    {
+        fprintf(f, "    mov    r8, rcx\n");
+        fprintf(f, "    mov    cl, dl\n\n");
 
-		for (int i = 8; i < bits / 8; i += 8)
-		{
-			fprintf(f, "    mov    rax, [r8 + %d]\n", i);
-			if (i == 8)
-				fprintf(f, "    shrd   [r8], rax, cl\n\n");
-			else
-				fprintf(f, "    shrd   [r8 + %d], rax, cl\n\n", i - 8);
-		}
+        for (int i = 8; i < bits / 8; i += 8)
+        {
+            fprintf(f, "    mov    rax, [r8 + %d]\n", i);
+            if (i == 8)
+                fprintf(f, "    shrd   [r8], rax, cl\n\n");
+            else
+                fprintf(f, "    shrd   [r8 + %d], rax, cl\n\n", i - 8);
+        }
 
-		fprintf(f, "    shr    qword [r8+%d], cl\n\n", bits / 8 - 8);
-	}
-	else
-	{
-		fprintf(f, "    mov    cl, sil\n\n");
+        fprintf(f, "    shr    qword [r8+%d], cl\n\n", bits / 8 - 8);
+    }
+    else
+    {
+        fprintf(f, "    mov    cl, sil\n\n");
 
-		for (int i = 8; i < bits / 8; i += 8)
-		{
-			fprintf(f, "    mov    rax, [rdi + %d]\n", i);
-			if (i == 8)
-				fprintf(f, "    shrd   [rdi], rax, cl\n\n");
-			else
-				fprintf(f, "    shrd   [rdi + %d], rax, cl\n\n", i - 8);
-		}
+        for (int i = 8; i < bits / 8; i += 8)
+        {
+            fprintf(f, "    mov    rax, [rdi + %d]\n", i);
+            if (i == 8)
+                fprintf(f, "    shrd   [rdi], rax, cl\n\n");
+            else
+                fprintf(f, "    shrd   [rdi + %d], rax, cl\n\n", i - 8);
+        }
 
-		fprintf(f, "    shr    qword [rdi+%d], cl\n\n", bits / 8 - 8);
-	
-	}
+        fprintf(f, "    shr    qword [rdi+%d], cl\n\n", bits / 8 - 8);
+    
+    }
 
-	fprintf(f, "    ret\n\n");
+    fprintf(f, "    ret\n\n");
 }
 
 void generate_asm_sar(FILE* f)
 {
-	fprintf(f, "sar%d:\n", bits);
+    fprintf(f, "sar%d:\n", bits);
 
-	if (abi == 0)
-	{
-		fprintf(f, "    mov    r8, rcx\n");
-		fprintf(f, "    mov    cl, dl\n\n");
+    if (abi == 0)
+    {
+        fprintf(f, "    mov    r8, rcx\n");
+        fprintf(f, "    mov    cl, dl\n\n");
 
-		for (int i = 8; i < bits / 8; i += 8)
-		{
-			fprintf(f, "    mov    rax, [r8 + %d]\n", i);
-			if (i == 8)
-				fprintf(f, "    shrd   [r8], rax, cl\n\n");
-			else
-				fprintf(f, "    shrd   [r8 + %d], rax, cl\n\n", i - 8);
-		}
+        for (int i = 8; i < bits / 8; i += 8)
+        {
+            fprintf(f, "    mov    rax, [r8 + %d]\n", i);
+            if (i == 8)
+                fprintf(f, "    shrd   [r8], rax, cl\n\n");
+            else
+                fprintf(f, "    shrd   [r8 + %d], rax, cl\n\n", i - 8);
+        }
 
-		fprintf(f, "    sar    qword [r8+%d], cl\n\n", bits / 8 - 8);
-	}
-	else
-	{
-		fprintf(f, "    mov    cl, sil\n\n");
+        fprintf(f, "    sar    qword [r8+%d], cl\n\n", bits / 8 - 8);
+    }
+    else
+    {
+        fprintf(f, "    mov    cl, sil\n\n");
 
-		for (int i = 8; i < bits / 8; i += 8)
-		{
-			fprintf(f, "    mov    rax, [rdi + %d]\n", i);
-			if (i == 8)
-				fprintf(f, "    shrd   [rdi], rax, cl\n\n");
-			else
-				fprintf(f, "    shrd   [rdi + %d], rax, cl\n\n", i - 8);
-		}
+        for (int i = 8; i < bits / 8; i += 8)
+        {
+            fprintf(f, "    mov    rax, [rdi + %d]\n", i);
+            if (i == 8)
+                fprintf(f, "    shrd   [rdi], rax, cl\n\n");
+            else
+                fprintf(f, "    shrd   [rdi + %d], rax, cl\n\n", i - 8);
+        }
 
-		fprintf(f, "    sar    qword [rdi+%d], cl\n\n", bits / 8 - 8);
-	}
+        fprintf(f, "    sar    qword [rdi+%d], cl\n\n", bits / 8 - 8);
+    }
 
-	fprintf(f, "    ret\n\n");
+    fprintf(f, "    ret\n\n");
 }
 
 void generate_asm_and(FILE* f)
 {
-	fprintf(f, "and%d:\n", bits);
+    fprintf(f, "and%d:\n", bits);
 
-	if (abi == 0)
-	{
-		fprintf(f, "    mov rax, [rcx]\n");
-		fprintf(f, "    and rax, [rdx]\n");
-		fprintf(f, "    mov [r8], rax\n\n");
+    if (abi == 0)
+    {
+        fprintf(f, "    mov rax, [rcx]\n");
+        fprintf(f, "    and rax, [rdx]\n");
+        fprintf(f, "    mov [r8], rax\n\n");
 
-		for (int i = 8; i < bits / 8; i += 8)
-		{
-			fprintf(f, "    mov rax, [rcx + %d]\n", i);
-			fprintf(f, "    and rax, [rdx + %d]\n", i);
-			fprintf(f, "    mov [r8 + %d], rax\n\n", i);
-		}
-	}
-	else
-	{
-		fprintf(f, "    mov rax, [rdi]\n");
-		fprintf(f, "    and rax, [rsi]\n");
-		fprintf(f, "    mov [rdx], rax\n\n");
+        for (int i = 8; i < bits / 8; i += 8)
+        {
+            fprintf(f, "    mov rax, [rcx + %d]\n", i);
+            fprintf(f, "    and rax, [rdx + %d]\n", i);
+            fprintf(f, "    mov [r8 + %d], rax\n\n", i);
+        }
+    }
+    else
+    {
+        fprintf(f, "    mov rax, [rdi]\n");
+        fprintf(f, "    and rax, [rsi]\n");
+        fprintf(f, "    mov [rdx], rax\n\n");
 
-		for (int i = 8; i < bits / 8; i += 8)
-		{
-			fprintf(f, "    mov rax, [rdi + %d]\n", i);
-			fprintf(f, "    and rax, [rsi + %d]\n", i);
-			fprintf(f, "    mov [rdx + %d], rax\n\n", i);
-		}
-	}
+        for (int i = 8; i < bits / 8; i += 8)
+        {
+            fprintf(f, "    mov rax, [rdi + %d]\n", i);
+            fprintf(f, "    and rax, [rsi + %d]\n", i);
+            fprintf(f, "    mov [rdx + %d], rax\n\n", i);
+        }
+    }
 
-	fprintf(f, "    ret\n\n");
+    fprintf(f, "    ret\n\n");
 }
 
 void generate_asm_or(FILE* f)
 {
-	fprintf(f, "or%d:\n", bits);
+    fprintf(f, "or%d:\n", bits);
 
-	if (abi == 0)
-	{
+    if (abi == 0)
+    {
 
-		fprintf(f, "    mov rax, [rcx]\n");
-		fprintf(f, "    or rax, [rdx]\n");
-		fprintf(f, "    mov [r8], rax\n\n");
+        fprintf(f, "    mov rax, [rcx]\n");
+        fprintf(f, "    or rax, [rdx]\n");
+        fprintf(f, "    mov [r8], rax\n\n");
 
-		for (int i = 8; i < bits / 8; i += 8)
-		{
-			fprintf(f, "    mov rax, [rcx + %d]\n", i);
-			fprintf(f, "    or rax, [rdx + %d]\n", i);
-			fprintf(f, "    mov [r8 + %d], rax\n\n", i);
-		}
-	}
-	else
-	{
-		fprintf(f, "    mov rax, [rdi]\n");
-		fprintf(f, "    or rax, [rsi]\n");
-		fprintf(f, "    mov [rdx], rax\n\n");
+        for (int i = 8; i < bits / 8; i += 8)
+        {
+            fprintf(f, "    mov rax, [rcx + %d]\n", i);
+            fprintf(f, "    or rax, [rdx + %d]\n", i);
+            fprintf(f, "    mov [r8 + %d], rax\n\n", i);
+        }
+    }
+    else
+    {
+        fprintf(f, "    mov rax, [rdi]\n");
+        fprintf(f, "    or rax, [rsi]\n");
+        fprintf(f, "    mov [rdx], rax\n\n");
 
-		for (int i = 8; i < bits / 8; i += 8)
-		{
-			fprintf(f, "    mov rax, [rdi + %d]\n", i);
-			fprintf(f, "    or rax, [rsi + %d]\n", i);
-			fprintf(f, "    mov [rdx + %d], rax\n\n", i);
-		}
-	}
+        for (int i = 8; i < bits / 8; i += 8)
+        {
+            fprintf(f, "    mov rax, [rdi + %d]\n", i);
+            fprintf(f, "    or rax, [rsi + %d]\n", i);
+            fprintf(f, "    mov [rdx + %d], rax\n\n", i);
+        }
+    }
 
-	fprintf(f, "    ret\n\n");
+    fprintf(f, "    ret\n\n");
 }
 
 void generate_asm_xor(FILE* f)
 {
-	fprintf(f, "xor%d:\n", bits);
+    fprintf(f, "xor%d:\n", bits);
 
-	if (abi == 0)
-	{
-		fprintf(f, "    mov rax, [rcx]\n");
-		fprintf(f, "    xor rax, [rdx]\n");
-		fprintf(f, "    mov [r8], rax\n\n");
+    if (abi == 0)
+    {
+        fprintf(f, "    mov rax, [rcx]\n");
+        fprintf(f, "    xor rax, [rdx]\n");
+        fprintf(f, "    mov [r8], rax\n\n");
 
-		for (int i = 8; i < bits / 8; i += 8)
-		{
-			fprintf(f, "    mov rax, [rcx + %d]\n", i);
-			fprintf(f, "    xor rax, [rdx + %d]\n", i);
-			fprintf(f, "    mov [r8 + %d], rax\n\n", i);
-		}
-	}
-	else
-	{
-		fprintf(f, "    mov rax, [rdi]\n");
-		fprintf(f, "    xor rax, [rsi]\n");
-		fprintf(f, "    mov [rdx], rax\n\n");
+        for (int i = 8; i < bits / 8; i += 8)
+        {
+            fprintf(f, "    mov rax, [rcx + %d]\n", i);
+            fprintf(f, "    xor rax, [rdx + %d]\n", i);
+            fprintf(f, "    mov [r8 + %d], rax\n\n", i);
+        }
+    }
+    else
+    {
+        fprintf(f, "    mov rax, [rdi]\n");
+        fprintf(f, "    xor rax, [rsi]\n");
+        fprintf(f, "    mov [rdx], rax\n\n");
 
-		for (int i = 8; i < bits / 8; i += 8)
-		{
-			fprintf(f, "    mov rax, [rdi + %d]\n", i);
-			fprintf(f, "    xor rax, [rsi + %d]\n", i);
-			fprintf(f, "    mov [rdx + %d], rax\n\n", i);
-		}
-	}
+        for (int i = 8; i < bits / 8; i += 8)
+        {
+            fprintf(f, "    mov rax, [rdi + %d]\n", i);
+            fprintf(f, "    xor rax, [rsi + %d]\n", i);
+            fprintf(f, "    mov [rdx + %d], rax\n\n", i);
+        }
+    }
 
-	fprintf(f, "    ret\n\n");
+    fprintf(f, "    ret\n\n");
 }
 
 void generate_asm_not(FILE* f)
 {
-	fprintf(f, "not%d:\n", bits);
+    fprintf(f, "not%d:\n", bits);
 
-	if (abi == 0)
-	{
-		fprintf(f, "    not qword [rcx]\n");
+    if (abi == 0)
+    {
+        fprintf(f, "    not qword [rcx]\n");
 
-		for (int i = 8; i < bits / 8; i += 8)
-		{
-			fprintf(f, "    not qword [rcx + %d]\n", i);
-		}
-	}
-	else
-	{
-		fprintf(f, "    not qword [rdi]\n");
+        for (int i = 8; i < bits / 8; i += 8)
+        {
+            fprintf(f, "    not qword [rcx + %d]\n", i);
+        }
+    }
+    else
+    {
+        fprintf(f, "    not qword [rdi]\n");
 
-		for (int i = 8; i < bits / 8; i += 8)
-		{
-			fprintf(f, "    not qword [rdi + %d]\n", i);
-		}
-	}
+        for (int i = 8; i < bits / 8; i += 8)
+        {
+            fprintf(f, "    not qword [rdi + %d]\n", i);
+        }
+    }
 
-	fprintf(f, "    ret\n\n");
+    fprintf(f, "    ret\n\n");
 }
 
 void generate_asm()
 {
-	char s[128];
-	sprintf(s, "int%d.asm", bits);
+    char s[128];
+    sprintf(s, "int%d.asm", bits);
 
-	printf("generating %s\n", s);
+    printf("generating %s\n", s);
 
-	FILE* f = fopen(s, "w");
-	if (f == NULL)
-		error("Cannot open file", s);
+    FILE* f = fopen(s, "w");
+    if (f == NULL)
+        error("Cannot open file", s);
 
-	fprintf(f, "section .text\n\n");
+    fprintf(f, "section .text\n\n");
 
-	fprintf(f, "global add%d\n", bits);
-	fprintf(f, "global sub%d\n", bits);
-	fprintf(f, "global mul%d_1\n", bits);
-	fprintf(f, "global div%d_1\n", bits);
-	fprintf(f, "global neg%d\n", bits);
-	fprintf(f, "global shl%d\n", bits);
-	fprintf(f, "global shr%d\n", bits);
-	fprintf(f, "global sar%d\n", bits);
-	fprintf(f, "global and%d\n", bits);
-	fprintf(f, "global or%d\n", bits);
-	fprintf(f, "global xor%d\n", bits);
-	fprintf(f, "global not%d\n\n", bits);
+    fprintf(f, "global add%d\n", bits);
+    fprintf(f, "global sub%d\n", bits);
+    fprintf(f, "global mul%d_1\n", bits);
+    fprintf(f, "global div%d_1\n", bits);
+    fprintf(f, "global neg%d\n", bits);
+    fprintf(f, "global shl%d\n", bits);
+    fprintf(f, "global shr%d\n", bits);
+    fprintf(f, "global sar%d\n", bits);
+    fprintf(f, "global and%d\n", bits);
+    fprintf(f, "global or%d\n", bits);
+    fprintf(f, "global xor%d\n", bits);
+    fprintf(f, "global not%d\n\n", bits);
 
-	if (abi == 0) /* export directive is Windows/PE only */
-	{
-		fprintf(f, "export add%d\n", bits);
-		fprintf(f, "export sub%d\n", bits);
-		fprintf(f, "export mul%d_1\n", bits);
-		fprintf(f, "export div%d_1\n", bits);
-		fprintf(f, "export neg%d\n", bits);
-		fprintf(f, "export shl%d\n", bits);
-		fprintf(f, "export shr%d\n", bits);
-		fprintf(f, "export sar%d\n", bits);
-		fprintf(f, "export and%d\n", bits);
-		fprintf(f, "export or%d\n", bits);
-		fprintf(f, "export xor%d\n", bits);
-		fprintf(f, "export not%d\n", bits);
-	}
-	fprintf(f, "\n");
+    if (abi == 0) /* export directive is Windows/PE only */
+    {
+        fprintf(f, "export add%d\n", bits);
+        fprintf(f, "export sub%d\n", bits);
+        fprintf(f, "export mul%d_1\n", bits);
+        fprintf(f, "export div%d_1\n", bits);
+        fprintf(f, "export neg%d\n", bits);
+        fprintf(f, "export shl%d\n", bits);
+        fprintf(f, "export shr%d\n", bits);
+        fprintf(f, "export sar%d\n", bits);
+        fprintf(f, "export and%d\n", bits);
+        fprintf(f, "export or%d\n", bits);
+        fprintf(f, "export xor%d\n", bits);
+        fprintf(f, "export not%d\n", bits);
+    }
+    fprintf(f, "\n");
 
-	generate_asm_add(f);
-	generate_asm_sub(f);
-	generate_asm_mul(f);
-	generate_asm_div(f);
-	generate_asm_neg(f);
-	generate_asm_shl(f);
-	generate_asm_shr(f);
-	generate_asm_sar(f);
-	generate_asm_and(f);
-	generate_asm_or(f);
-	generate_asm_xor(f);
-	generate_asm_not(f);
+    generate_asm_add(f);
+    generate_asm_sub(f);
+    generate_asm_mul(f);
+    generate_asm_div(f);
+    generate_asm_neg(f);
+    generate_asm_shl(f);
+    generate_asm_shr(f);
+    generate_asm_sar(f);
+    generate_asm_and(f);
+    generate_asm_or(f);
+    generate_asm_xor(f);
+    generate_asm_not(f);
 
-	if (abi == 1) /* Linux elf64: mark stack as non-executable */
-		fprintf(f, "section .note.GNU-stack noalloc noexec nowrite progbits\n");
+    if (abi == 1) /* Linux elf64: mark stack as non-executable */
+        fprintf(f, "section .note.GNU-stack noalloc noexec nowrite progbits\n");
 
-	fclose(f);
+    fclose(f);
 
 }
 
 void generate_c_h()
 {
-	char s[128];
-	sprintf(s, "int%d.h", bits);
+    char s[128];
+    sprintf(s, "int%d.h", bits);
 
-	printf("generating %s\n", s);
+    printf("generating %s\n", s);
 
-	FILE* f = fopen(s, "w");
-	if (f == NULL)
-		error("Cannot open file", s);
+    FILE* f = fopen(s, "w");
+    if (f == NULL)
+        error("Cannot open file", s);
 
-	fprintf(f, "#ifndef INT%d_H\n", bits);
-	fprintf(f, "#define INT%d_H\n\n", bits);
+    fprintf(f, "#ifndef INT%d_H\n", bits);
+    fprintf(f, "#define INT%d_H\n\n", bits);
 
-	fprintf(f, "#ifdef __cplusplus\n");
-	fprintf(f, "extern \"C\" {\n");
-	fprintf(f, "#endif\n\n");
+    fprintf(f, "#ifdef __cplusplus\n");
+    fprintf(f, "extern \"C\" {\n");
+    fprintf(f, "#endif\n\n");
 
-	fprintf(f, "#define INT%d_DIGITS %d\n\n", bits, bits / 64);
+    fprintf(f, "#define INT%d_DIGITS %d\n\n", bits, bits / 64);
 
-	fprintf(f, "typedef long long INT%d[INT%d_DIGITS];\n\n", bits, bits);
+    fprintf(f, "typedef long long INT%d[INT%d_DIGITS];\n\n", bits, bits);
 
-	fprintf(f, "static const INT%d INT%d_MIN = { ", bits, bits);
-	for (int i = 1; i < bits / 64; i++)
-	{
-		fprintf(f, "0, ");
-	}
-	fprintf(f, "(long long)0x8000000000000000 };\n");
+    fprintf(f, "static const INT%d INT%d_MIN = { ", bits, bits);
+    for (int i = 1; i < bits / 64; i++)
+    {
+        fprintf(f, "0, ");
+    }
+    fprintf(f, "(long long)0x8000000000000000 };\n");
 
-	fprintf(f, "static const INT%d INT%d_MAX = { ", bits, bits);
-	for (int i = 1; i < bits / 64; i++)
-	{
-		fprintf(f, "(long long)0xFFFFFFFFFFFFFFFF, ");
-	}
-	fprintf(f, " 0x7FFFFFFFFFFFFFFF };\n\n");
+    fprintf(f, "static const INT%d INT%d_MAX = { ", bits, bits);
+    for (int i = 1; i < bits / 64; i++)
+    {
+        fprintf(f, "(long long)0xFFFFFFFFFFFFFFFF, ");
+    }
+    fprintf(f, " 0x7FFFFFFFFFFFFFFF };\n\n");
 
-	fprintf(f, "static const INT%d INT%d_ZERO = { ", bits, bits);
-	for (int i = 1; i < bits / 64; i++)
-	{
-		fprintf(f, "0ll, ");
-	}
-	fprintf(f, " 0ll };\n\n");
+    fprintf(f, "static const INT%d INT%d_ZERO = { ", bits, bits);
+    for (int i = 1; i < bits / 64; i++)
+    {
+        fprintf(f, "0ll, ");
+    }
+    fprintf(f, " 0ll };\n\n");
 
-	fprintf(f, "/* a = i */\n");
-	fprintf(f, "void assign%d(INT%d a, long long i);\n\n", bits, bits);
+    fprintf(f, "/* a = i */\n");
+    fprintf(f, "void assign%d(INT%d a, long long i);\n\n", bits, bits);
 
-	fprintf(f, "/* b = a */\n");
-	fprintf(f, "void copy%d(const INT%d a, INT%d b);\n\n", bits, bits, bits);
+    fprintf(f, "/* b = a */\n");
+    fprintf(f, "void copy%d(const INT%d a, INT%d b);\n\n", bits, bits, bits);
 
-	fprintf(f, "/* return -1 if a < b, 0 if a == b, 1 if a > b */\n");
-	fprintf(f, "int compare%d(const INT%d a, const INT%d b);\n\n", bits, bits, bits);
+    fprintf(f, "/* return -1 if a < b, 0 if a == b, 1 if a > b */\n");
+    fprintf(f, "int compare%d(const INT%d a, const INT%d b);\n\n", bits, bits, bits);
 
-	fprintf(f, "/* return 1 if negative, else 0 */\n");
-	fprintf(f, "int is_negative%d(INT%d a);\n\n", bits, bits);
+    fprintf(f, "/* return 1 if negative, else 0 */\n");
+    fprintf(f, "int is_negative%d(INT%d a);\n\n", bits, bits);
 
-	fprintf(f, "/* return a pointer to the base 10 representation */\n");
-	fprintf(f, "char* to_decimal_string%d(const INT%d a, char *buf, int size);\n\n", bits, bits);
+    fprintf(f, "/* return a pointer to the base 10 representation */\n");
+    fprintf(f, "char* to_decimal_string%d(const INT%d a, char *buf, int size);\n\n", bits, bits);
 
-	fprintf(f, "/* c = a + b */\n");
-	fprintf(f, "void add%d(INT%d a, INT%d b, INT%d c);\n\n", bits, bits, bits, bits);
+    fprintf(f, "/* c = a + b */\n");
+    fprintf(f, "void add%d(INT%d a, INT%d b, INT%d c);\n\n", bits, bits, bits, bits);
 
-	fprintf(f, "/* c = a - b */\n");
-	fprintf(f, "void sub%d(INT%d a, INT%d b, INT%d c);\n\n", bits, bits, bits, bits);
+    fprintf(f, "/* c = a - b */\n");
+    fprintf(f, "void sub%d(INT%d a, INT%d b, INT%d c);\n\n", bits, bits, bits, bits);
 
-	fprintf(f, "/* c = a * i */\n");
-	fprintf(f, "/* a >= 0, i >= 0 */\n");
-	fprintf(f, "void mul%d_1(INT%d a, long long i, INT%d c);\n\n", bits, bits, bits);
+    fprintf(f, "/* c = a * i */\n");
+    fprintf(f, "/* a >= 0, i >= 0 */\n");
+    fprintf(f, "void mul%d_1(INT%d a, long long i, INT%d c);\n\n", bits, bits, bits);
 
-	fprintf(f, "/* c = a * b */\n");
-	fprintf(f, "void mul%d(INT%d a, INT%d b, INT%d c);\n\n", bits, bits, bits, bits);
+    fprintf(f, "/* c = a * b */\n");
+    fprintf(f, "void mul%d(INT%d a, INT%d b, INT%d c);\n\n", bits, bits, bits, bits);
 
-	fprintf(f, "/* c = a / i (r = remainder) */\n");
-	fprintf(f, "/* a >= 0, i > 0 */\n");
-	fprintf(f, "long long div%d_1(INT%d a, long long i, INT%d c);\n\n", bits, bits, bits);
+    fprintf(f, "/* c = a / i (r = remainder) */\n");
+    fprintf(f, "/* a >= 0, i > 0 */\n");
+    fprintf(f, "long long div%d_1(INT%d a, long long i, INT%d c);\n\n", bits, bits, bits);
 
-	fprintf(f, "/* c = a / b (r = remainder) */\n");
-	fprintf(f, "void div%d(INT%d a, INT%d b, INT%d c, INT%d r);\n\n", bits, bits, bits, bits, bits);
+    fprintf(f, "/* c = a / b (r = remainder) */\n");
+    fprintf(f, "void div%d(INT%d a, INT%d b, INT%d c, INT%d r);\n\n", bits, bits, bits, bits, bits);
 
-	fprintf(f, "/* a = -a */\n");
-	fprintf(f, "void neg%d(INT%d a);\n\n", bits, bits);
+    fprintf(f, "/* a = -a */\n");
+    fprintf(f, "void neg%d(INT%d a);\n\n", bits, bits);
 
-	fprintf(f, "/* a = a << n */\n");
-	fprintf(f, "void shl%d(INT%d a, int n);\n\n", bits, bits);
+    fprintf(f, "/* a = a << n */\n");
+    fprintf(f, "void shl%d(INT%d a, int n);\n\n", bits, bits);
 
-	fprintf(f, "/* a = a >> n */\n");
-	fprintf(f, "void shr%d(INT%d a, int n);\n\n", bits, bits);
+    fprintf(f, "/* a = a >> n */\n");
+    fprintf(f, "void shr%d(INT%d a, int n);\n\n", bits, bits);
 
-	fprintf(f, "/* a = a >> n (arithmetic) */\n");
-	fprintf(f, "void sar%d(INT%d a, int n);\n\n", bits, bits);
+    fprintf(f, "/* a = a >> n (arithmetic) */\n");
+    fprintf(f, "void sar%d(INT%d a, int n);\n\n", bits, bits);
 
-	fprintf(f, "/* c = a & b */\n");
-	fprintf(f, "void and%d(INT%d a, INT%d b, INT%d c);\n\n", bits, bits, bits, bits);
+    fprintf(f, "/* c = a & b */\n");
+    fprintf(f, "void and%d(INT%d a, INT%d b, INT%d c);\n\n", bits, bits, bits, bits);
 
-	fprintf(f, "/* c = a | b */\n");
-	fprintf(f, "void or%d(INT%d a, INT%d b, INT%d c);\n\n", bits, bits, bits, bits);
+    fprintf(f, "/* c = a | b */\n");
+    fprintf(f, "void or%d(INT%d a, INT%d b, INT%d c);\n\n", bits, bits, bits, bits);
 
-	fprintf(f, "/* c = a ^ b */\n");
-	fprintf(f, "void xor%d(INT%d a, INT%d b, INT%d c);\n\n", bits, bits, bits, bits);
+    fprintf(f, "/* c = a ^ b */\n");
+    fprintf(f, "void xor%d(INT%d a, INT%d b, INT%d c);\n\n", bits, bits, bits, bits);
 
-	fprintf(f, "/* b = ~a */\n");
-	fprintf(f, "void not%d(INT%d a);\n\n", bits, bits);
+    fprintf(f, "/* b = ~a */\n");
+    fprintf(f, "void not%d(INT%d a);\n\n", bits, bits);
 
-	fprintf(f, "/* parse decimal integer */\n");
-	fprintf(f, "void parse%d(const char *s, INT%d a);\n\n", bits, bits);
+    fprintf(f, "/* parse decimal integer */\n");
+    fprintf(f, "void parse%d(const char *s, INT%d a);\n\n", bits, bits);
 
-	fprintf(f, "#ifdef __cplusplus\n");
-	fprintf(f, "}\n");
-	fprintf(f, "#endif\n\n");
+    fprintf(f, "#ifdef __cplusplus\n");
+    fprintf(f, "}\n");
+    fprintf(f, "#endif\n\n");
 
 
-	fprintf(f, "#endif\n");
+    fprintf(f, "#endif\n");
 
-	fclose(f);
+    fclose(f);
 }
 
 void generate_c()
 {
-	char s[128];
-	FILE* f = NULL;
-	int i, j, k;
+    char s[128];
+    FILE* f = NULL;
+    int i, j, k;
 
-	generate_c_h(bits);
+    generate_c_h(bits);
 
-	sprintf(s, "int%d.c", bits);
+    sprintf(s, "int%d.c", bits);
 
-	printf("generating %s\n", s);
+    printf("generating %s\n", s);
 
-	f = fopen(s, "w");
-	if (f == NULL)
-		error("Cannot open file", s);
+    f = fopen(s, "w");
+    if (f == NULL)
+        error("Cannot open file", s);
 
-	fprintf(f, "#include \"int%d.h\"\n\n", bits);
+    fprintf(f, "#include \"int%d.h\"\n\n", bits);
 
-	fprintf(f, "void assign%d(INT%d a, long long i)\n", bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    a[0] = i;\n");
-	for (i = 1; i < bits / 64; i++)
-		fprintf(f, "    a[%d] = i < 0 ? -1 : 0;\n", i);
-	fprintf(f, "}\n\n");
+    fprintf(f, "void assign%d(INT%d a, long long i)\n", bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    a[0] = i;\n");
+    for (i = 1; i < bits / 64; i++)
+        fprintf(f, "    a[%d] = i < 0 ? -1 : 0;\n", i);
+    fprintf(f, "}\n\n");
 
-	fprintf(f, "void copy%d(const INT%d a, INT%d b)\n", bits, bits, bits);
-	fprintf(f, "{\n");
-	for (i = 0; i < bits / 64; i++)
-		fprintf(f, "    b[%d] = a[%d];\n", i, i);
-	fprintf(f, "}\n\n");
+    fprintf(f, "void copy%d(const INT%d a, INT%d b)\n", bits, bits, bits);
+    fprintf(f, "{\n");
+    for (i = 0; i < bits / 64; i++)
+        fprintf(f, "    b[%d] = a[%d];\n", i, i);
+    fprintf(f, "}\n\n");
 
-	fprintf(f, "int compare%d(const INT%d a, const INT%d b)\n", bits, bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    long long sa = a[%d] & 0x8000000000000000;\n", bits / 64 - 1);
-	fprintf(f, "    long long sb = b[%d] & 0x8000000000000000;\n\n", bits / 64 - 1);
+    fprintf(f, "int compare%d(const INT%d a, const INT%d b)\n", bits, bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    long long sa = a[%d] & 0x8000000000000000;\n", bits / 64 - 1);
+    fprintf(f, "    long long sb = b[%d] & 0x8000000000000000;\n\n", bits / 64 - 1);
 
-	fprintf(f, "    if (sa == sb)\n");
-	fprintf(f, "    {\n");
-	fprintf(f, "        /* same sign */\n");
-	for (i = bits / 64 - 1; i >= 0; i--)
-	{
-		fprintf(f, "        if ((unsigned long long)a[%d] < (unsigned long long)b[%d]) return -1;\n", i, i);
-		fprintf(f, "        if ((unsigned long long)a[%d] > (unsigned long long)b[%d]) return 1;\n", i, i);
-	}
+    fprintf(f, "    if (sa == sb)\n");
+    fprintf(f, "    {\n");
+    fprintf(f, "        /* same sign */\n");
+    for (i = bits / 64 - 1; i >= 0; i--)
+    {
+        fprintf(f, "        if ((unsigned long long)a[%d] < (unsigned long long)b[%d]) return -1;\n", i, i);
+        fprintf(f, "        if ((unsigned long long)a[%d] > (unsigned long long)b[%d]) return 1;\n", i, i);
+    }
 
-	fprintf(f, "        return 0;\n");
+    fprintf(f, "        return 0;\n");
 
-	fprintf(f, "    }\n\n");
+    fprintf(f, "    }\n\n");
 
-	fprintf(f, "    if (sa == 0)\n");
-	fprintf(f, "    {\n");
-	fprintf(f, "        /* positive a, negative b */\n");
-	fprintf(f, "        return 1;\n");
-	fprintf(f, "    }\n\n");
+    fprintf(f, "    if (sa == 0)\n");
+    fprintf(f, "    {\n");
+    fprintf(f, "        /* positive a, negative b */\n");
+    fprintf(f, "        return 1;\n");
+    fprintf(f, "    }\n\n");
 
-	fprintf(f, "    /* negative a, positive b */\n");
-	fprintf(f, "    return -1;\n");
-	fprintf(f, "}\n\n");
+    fprintf(f, "    /* negative a, positive b */\n");
+    fprintf(f, "    return -1;\n");
+    fprintf(f, "}\n\n");
 
-	fprintf(f, "int is_negative%d(INT%d a)\n", bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    return ((unsigned long long)a[%d] & 0x8000000000000000) ? 1 : 0;\n", bits / 64 - 1);
-	fprintf(f, "}\n\n");
+    fprintf(f, "int is_negative%d(INT%d a)\n", bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    return ((unsigned long long)a[%d] & 0x8000000000000000) ? 1 : 0;\n", bits / 64 - 1);
+    fprintf(f, "}\n\n");
 
-	fprintf(f, "char* to_decimal_string%d(const INT%d a, char *buf, int size)\n", bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    int i = size-1;\n");
-	fprintf(f, "    int is_negative = is_negative%d(a);\n", bits);
-	fprintf(f, "    INT%d b;\n", bits);
-	fprintf(f, "    INT%d zero;\n", bits);
-	fprintf(f, "    INT%d c;\n", bits);
-	fprintf(f, "    long long r;\n\n");
+    fprintf(f, "char* to_decimal_string%d(const INT%d a, char *buf, int size)\n", bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    int i = size-1;\n");
+    fprintf(f, "    int is_negative = is_negative%d(a);\n", bits);
+    fprintf(f, "    INT%d b;\n", bits);
+    fprintf(f, "    INT%d zero;\n", bits);
+    fprintf(f, "    INT%d c;\n", bits);
+    fprintf(f, "    long long r;\n\n");
 
-	fprintf(f, "    if (compare%d(a, INT%d_ZERO) == 0)\n", bits, bits);
-	fprintf(f, "    {\n");
+    fprintf(f, "    if (compare%d(a, INT%d_ZERO) == 0)\n", bits, bits);
+    fprintf(f, "    {\n");
     fprintf(f, "        buf[0] = '0';\n");
     fprintf(f, "        buf[1] = 0;\n");
     fprintf(f, "        return buf;\n");
-	fprintf(f, "    }\n\n");
+    fprintf(f, "    }\n\n");
 
-	fprintf(f, "    copy%d(a, b);\n", bits);
-	fprintf(f, "    assign%d(zero, 0);\n\n", bits);
+    fprintf(f, "    copy%d(a, b);\n", bits);
+    fprintf(f, "    assign%d(zero, 0);\n\n", bits);
 
-	fprintf(f, "    if (is_negative)\n");
-	fprintf(f, "    {\n");
-	fprintf(f, "        neg%d(b);\n", bits);
-	fprintf(f, "    }\n\n");
+    fprintf(f, "    if (is_negative)\n");
+    fprintf(f, "    {\n");
+    fprintf(f, "        neg%d(b);\n", bits);
+    fprintf(f, "    }\n\n");
 
-	fprintf(f, "    buf[i--] = 0;\n");
-	fprintf(f, "    while (compare%d(b, zero) != 0)\n", bits);
-	fprintf(f, "    {\n");
-	fprintf(f, "        r = div%d_1(b, 10, c);\n", bits);
-	fprintf(f, "        buf[i--] = (char)r + '0';\n");
-	fprintf(f, "        copy%d(c, b);\n", bits);
-	fprintf(f, "    }\n\n");
+    fprintf(f, "    buf[i--] = 0;\n");
+    fprintf(f, "    while (compare%d(b, zero) != 0)\n", bits);
+    fprintf(f, "    {\n");
+    fprintf(f, "        r = div%d_1(b, 10, c);\n", bits);
+    fprintf(f, "        buf[i--] = (char)r + '0';\n");
+    fprintf(f, "        copy%d(c, b);\n", bits);
+    fprintf(f, "    }\n\n");
 
-	fprintf(f, "    if (is_negative)\n");
-	fprintf(f, "    {\n");
-	fprintf(f, "        buf[i--] = '-';\n");
-	fprintf(f, "    }\n\n");
+    fprintf(f, "    if (is_negative)\n");
+    fprintf(f, "    {\n");
+    fprintf(f, "        buf[i--] = '-';\n");
+    fprintf(f, "    }\n\n");
 
-	fprintf(f, "    return buf + i + 1;\n");
-	fprintf(f, "}\n\n");
+    fprintf(f, "    return buf + i + 1;\n");
+    fprintf(f, "}\n\n");
 
-	fprintf(f, "void mul%d(INT%d a, INT%d b, INT%d c)\n", bits, bits, bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    INT%d aa, bb, x, y;\n", bits);
-	fprintf(f, "    long long sa, sb;\n\n");
+    fprintf(f, "void mul%d(INT%d a, INT%d b, INT%d c)\n", bits, bits, bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    INT%d aa, bb, x, y;\n", bits);
+    fprintf(f, "    long long sa, sb;\n\n");
 
-	fprintf(f, "    copy%d(a, aa);\n", bits);
-	fprintf(f, "    copy%d(b, bb);\n", bits);
-	fprintf(f, "    sa = aa[%d] & 0x8000000000000000;\n", bits / 64 - 1);
-	fprintf(f, "    sb = bb[%d] & 0x8000000000000000;\n", bits / 64 - 1);
-	fprintf(f, "    if (sa) neg%d(aa);\n", bits);
-	fprintf(f, "    if (sb) neg%d(bb);\n\n", bits);
+    fprintf(f, "    copy%d(a, aa);\n", bits);
+    fprintf(f, "    copy%d(b, bb);\n", bits);
+    fprintf(f, "    sa = aa[%d] & 0x8000000000000000;\n", bits / 64 - 1);
+    fprintf(f, "    sb = bb[%d] & 0x8000000000000000;\n", bits / 64 - 1);
+    fprintf(f, "    if (sa) neg%d(aa);\n", bits);
+    fprintf(f, "    if (sb) neg%d(bb);\n\n", bits);
 
-	fprintf(f, "    mul%d_1(aa, bb[0], x);\n\n", bits);
+    fprintf(f, "    mul%d_1(aa, bb[0], x);\n\n", bits);
 
-	for (i = 1, k = 0; i < bits / 64; i++, k++)
-	{
-		fprintf(f, "    mul%d_1(aa, bb[%d], y);\n", bits, i);
-		for (j = bits / 64 - 1; j >= i; j--)
-		{
-			fprintf(f, "    y[%d] = y[%d];\n", j, j - 1 - k);
-		}
-		for (; j >= 0; j--)
-		{
-			fprintf(f, "    y[%d] = 0;\n", j);
-		}
-		fprintf(f, "    add%d(x, y, c);\n", bits);
-		if (i < bits / 64 - 1) fprintf(f, "    copy%d(c, x);\n\n", bits);
-		else fprintf(f, "\n");
-	}
+    for (i = 1, k = 0; i < bits / 64; i++, k++)
+    {
+        fprintf(f, "    mul%d_1(aa, bb[%d], y);\n", bits, i);
+        for (j = bits / 64 - 1; j >= i; j--)
+        {
+            fprintf(f, "    y[%d] = y[%d];\n", j, j - 1 - k);
+        }
+        for (; j >= 0; j--)
+        {
+            fprintf(f, "    y[%d] = 0;\n", j);
+        }
+        fprintf(f, "    add%d(x, y, c);\n", bits);
+        if (i < bits / 64 - 1) fprintf(f, "    copy%d(c, x);\n\n", bits);
+        else fprintf(f, "\n");
+    }
 
-	fprintf(f, "    if (sa != sb) neg%d(c);\n", bits);
-	fprintf(f, "}\n\n");
+    fprintf(f, "    if (sa != sb) neg%d(c);\n", bits);
+    fprintf(f, "}\n\n");
 
-	fprintf(f, "void div%d_first_digit(INT%d a, INT%d b, INT%d c, INT%d r)\n", bits, bits, bits, bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    INT%d bb;\n", bits);
+    fprintf(f, "void div%d_first_digit(INT%d a, INT%d b, INT%d c, INT%d r)\n", bits, bits, bits, bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    INT%d bb;\n", bits);
 
-	fprintf(f, "    copy%d(b, bb);\n", bits);
-	fprintf(f, "    assign%d(c, 1);\n\n", bits);
+    fprintf(f, "    copy%d(b, bb);\n", bits);
+    fprintf(f, "    assign%d(c, 1);\n\n", bits);
 
-	fprintf(f, "    /* first, shift 64 bits at a time */\n");
-	fprintf(f, "    while (bb[%d] == 0 && compare%d(a, bb) > 0)\n", bits / 64 - 1, bits);
-	fprintf(f, "    {\n");
-	for (i = bits / 64 - 1; i > 0; i--)
-	{
-		fprintf(f, "        bb[%d] = bb[%d];\n", i, i - 1);
-		fprintf(f, "        c[%d] = c[%d];\n", i, i - 1);
-	}
-	fprintf(f, "        bb[0] = 0;\n");
-	fprintf(f, "        c[0] = 0;\n");
-	fprintf(f, "    }\n");
+    fprintf(f, "    /* first, shift 64 bits at a time */\n");
+    fprintf(f, "    while (bb[%d] == 0 && compare%d(a, bb) > 0)\n", bits / 64 - 1, bits);
+    fprintf(f, "    {\n");
+    for (i = bits / 64 - 1; i > 0; i--)
+    {
+        fprintf(f, "        bb[%d] = bb[%d];\n", i, i - 1);
+        fprintf(f, "        c[%d] = c[%d];\n", i, i - 1);
+    }
+    fprintf(f, "        bb[0] = 0;\n");
+    fprintf(f, "        c[0] = 0;\n");
+    fprintf(f, "    }\n");
 
-	fprintf(f, "    if (compare%d(a, bb) < 0)\n", bits);
-	fprintf(f, "    {\n");
-	for (i = 0; i < bits / 64 - 1; i++)
-	{
-		fprintf(f, "        bb[%d] = bb[%d];\n", i, i + 1);
-		fprintf(f, "        c[%d] = c[%d];\n", i, i + 1);
-	}
-	fprintf(f, "        bb[%d] = 0;\n", bits / 64 - 1);
-	fprintf(f, "        c[%d] = 0;\n", bits / 64 - 1);
-	fprintf(f, "    }\n\n");
+    fprintf(f, "    if (compare%d(a, bb) < 0)\n", bits);
+    fprintf(f, "    {\n");
+    for (i = 0; i < bits / 64 - 1; i++)
+    {
+        fprintf(f, "        bb[%d] = bb[%d];\n", i, i + 1);
+        fprintf(f, "        c[%d] = c[%d];\n", i, i + 1);
+    }
+    fprintf(f, "        bb[%d] = 0;\n", bits / 64 - 1);
+    fprintf(f, "        c[%d] = 0;\n", bits / 64 - 1);
+    fprintf(f, "    }\n\n");
 
-	fprintf(f, "    /* then, shift bit by bit */\n");
-	fprintf(f, "    while ( ((bb[%d] & 0x4000000000000000) == 0) && (compare%d(a, bb) > 0) )\n", bits / 64 - 1, bits);
-	fprintf(f, "    {\n");
-	fprintf(f, "        shl%d(bb, 1);\n", bits);
-	fprintf(f, "        shl%d(c, 1);\n", bits);
-	fprintf(f, "    }\n");
+    fprintf(f, "    /* then, shift bit by bit */\n");
+    fprintf(f, "    while ( ((bb[%d] & 0x4000000000000000) == 0) && (compare%d(a, bb) > 0) )\n", bits / 64 - 1, bits);
+    fprintf(f, "    {\n");
+    fprintf(f, "        shl%d(bb, 1);\n", bits);
+    fprintf(f, "        shl%d(c, 1);\n", bits);
+    fprintf(f, "    }\n");
 
-	fprintf(f, "	if (compare%d(a, bb) < 0)\n", bits);
-	fprintf(f, "    {\n");
-	fprintf(f, "        shr%d(bb, 1);\n", bits);
-	fprintf(f, "        shr%d(c, 1);\n", bits);
-	fprintf(f, "    }\n\n");
+    fprintf(f, "    if (compare%d(a, bb) < 0)\n", bits);
+    fprintf(f, "    {\n");
+    fprintf(f, "        shr%d(bb, 1);\n", bits);
+    fprintf(f, "        shr%d(c, 1);\n", bits);
+    fprintf(f, "    }\n\n");
 
-	fprintf(f, "    /* subtract */\n");
-	fprintf(f, "    sub%d(a, bb, r);\n", bits);
-	fprintf(f, "}\n\n");
+    fprintf(f, "    /* subtract */\n");
+    fprintf(f, "    sub%d(a, bb, r);\n", bits);
+    fprintf(f, "}\n\n");
 
-	fprintf(f, "void div%d(INT%d a, INT%d b, INT%d c, INT%d d)\n", bits, bits, bits, bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    long long sa = a[%d] & 0x8000000000000000;\n", bits / 64 - 1);
-	fprintf(f, "    long long sb = b[%d] & 0x8000000000000000;\n", bits / 64 - 1);
-	fprintf(f, "    long long sd;\n");
-	fprintf(f, "    long long x;\n");
-	fprintf(f, "    INT%d cc, dd, ccc;\n\n", bits);
+    fprintf(f, "void div%d(INT%d a, INT%d b, INT%d c, INT%d d)\n", bits, bits, bits, bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    long long sa = a[%d] & 0x8000000000000000;\n", bits / 64 - 1);
+    fprintf(f, "    long long sb = b[%d] & 0x8000000000000000;\n", bits / 64 - 1);
+    fprintf(f, "    long long sd;\n");
+    fprintf(f, "    long long x;\n");
+    fprintf(f, "    INT%d cc, dd, ccc;\n\n", bits);
 
-	for (i = bits / 64 - 1; i > 0; i--)
-		fprintf(f, "    c[%d] = 0;\n", i);
+    for (i = bits / 64 - 1; i > 0; i--)
+        fprintf(f, "    c[%d] = 0;\n", i);
 
-	fprintf(f, "    if (sa) neg%d(a);\n", bits);
-	fprintf(f, "    if (sb) neg%d(b);\n\n", bits);
+    fprintf(f, "    if (sa) neg%d(a);\n", bits);
+    fprintf(f, "    if (sb) neg%d(b);\n\n", bits);
 
-	fprintf(f, "    x = compare%d(a, b);\n\n", bits);
+    fprintf(f, "    x = compare%d(a, b);\n\n", bits);
 
-	fprintf(f, "    if (x < 0)\n");
-	fprintf(f, "    {\n");
-	fprintf(f, "        c[0] = 0;\n");
-	fprintf(f, "        copy%d(a, d);\n", bits);
-	fprintf(f, "        if (sa != sb) neg%d(d);\n", bits);
-	fprintf(f, "        if (sa) neg%d(a);\n", bits);
-	fprintf(f, "        if (sb) neg%d(b);\n", bits);
-	fprintf(f, "        return;\n");
-	fprintf(f, "    }\n\n");
+    fprintf(f, "    if (x < 0)\n");
+    fprintf(f, "    {\n");
+    fprintf(f, "        c[0] = 0;\n");
+    fprintf(f, "        copy%d(a, d);\n", bits);
+    fprintf(f, "        if (sa != sb) neg%d(d);\n", bits);
+    fprintf(f, "        if (sa) neg%d(a);\n", bits);
+    fprintf(f, "        if (sb) neg%d(b);\n", bits);
+    fprintf(f, "        return;\n");
+    fprintf(f, "    }\n\n");
 
-	fprintf(f, "    c[0] = 1;\n");
+    fprintf(f, "    c[0] = 1;\n");
 
-	fprintf(f, "    if (x == 0)\n");
-	fprintf(f, "    {\n");
-	fprintf(f, "        if (sa != sb) neg%d(c);\n", bits);
-	fprintf(f, "        if (sa) neg%d(a);\n", bits);
-	fprintf(f, "        if (sb) neg%d(b);\n", bits);
-	fprintf(f, "        assign%d(d, 0);\n", bits);
-	fprintf(f, "        return;\n");
-	fprintf(f, "    }\n\n");
+    fprintf(f, "    if (x == 0)\n");
+    fprintf(f, "    {\n");
+    fprintf(f, "        if (sa != sb) neg%d(c);\n", bits);
+    fprintf(f, "        if (sa) neg%d(a);\n", bits);
+    fprintf(f, "        if (sb) neg%d(b);\n", bits);
+    fprintf(f, "        assign%d(d, 0);\n", bits);
+    fprintf(f, "        return;\n");
+    fprintf(f, "    }\n\n");
 
-	fprintf(f, "    div%d_first_digit(a, b, c, d);\n", bits);
-	fprintf(f, "	if (compare%d(d, b) < 0)\n", bits);
-	fprintf(f, "    {\n");
-	fprintf(f, "        if (sa) neg%d(a);\n", bits);
-	fprintf(f, "        if (sb) neg%d(b);\n", bits);
-	fprintf(f, "        if (sa != sb)\n");
-	fprintf(f, "        {\n");
-	fprintf(f, "            neg%d(c);\n", bits);
-	fprintf(f, "        }\n");
-	fprintf(f, "        sd = d[%d] & 0x8000000000000000;\n", bits / 64 - 1);
-	fprintf(f, "        if (sa != sd)\n");
-	fprintf(f, "        {\n");
-	fprintf(f, "            neg%d(d);\n", bits);
-	fprintf(f, "        }\n");
-	fprintf(f, "        return;\n");
-	fprintf(f, "    }\n\n");
+    fprintf(f, "    div%d_first_digit(a, b, c, d);\n", bits);
+    fprintf(f, "    if (compare%d(d, b) < 0)\n", bits);
+    fprintf(f, "    {\n");
+    fprintf(f, "        if (sa) neg%d(a);\n", bits);
+    fprintf(f, "        if (sb) neg%d(b);\n", bits);
+    fprintf(f, "        if (sa != sb)\n");
+    fprintf(f, "        {\n");
+    fprintf(f, "            neg%d(c);\n", bits);
+    fprintf(f, "        }\n");
+    fprintf(f, "        sd = d[%d] & 0x8000000000000000;\n", bits / 64 - 1);
+    fprintf(f, "        if (sa != sd)\n");
+    fprintf(f, "        {\n");
+    fprintf(f, "            neg%d(d);\n", bits);
+    fprintf(f, "        }\n");
+    fprintf(f, "        return;\n");
+    fprintf(f, "    }\n\n");
 
-	fprintf(f, "    while (1)\n");
-	fprintf(f, "    {\n");
-	fprintf(f, "        div%d_first_digit(d, b, cc, dd);\n", bits);
-	fprintf(f, "        add%d(c, cc, ccc);\n", bits);
-	fprintf(f, "        copy%d(ccc, c);\n", bits);
-	fprintf(f, "        copy%d(dd, d);\n", bits);
-	fprintf(f, "        if (compare%d(d, b) < 0)\n", bits);
-	fprintf(f, "        {\n");
-	fprintf(f, "            if (sa) neg%d(a);\n", bits);
-	fprintf(f, "            if (sb) neg%d(b);\n", bits);
-	fprintf(f, "            if (sa != sb)\n");
-	fprintf(f, "            {\n");
-	fprintf(f, "                neg%d(c);\n", bits);
-	fprintf(f, "            }\n");
-	fprintf(f, "            sd = d[%d] & 0x8000000000000000;\n", bits / 64 - 1);
-	fprintf(f, "            if (sa != sd)\n");
-	fprintf(f, "            {\n");
-	fprintf(f, "                neg%d(d);\n", bits);
-	fprintf(f, "            }\n");
-	fprintf(f, "            return;\n");
-	fprintf(f, "        }\n");
-	fprintf(f, "    }\n");
-	fprintf(f, "}\n\n");
+    fprintf(f, "    while (1)\n");
+    fprintf(f, "    {\n");
+    fprintf(f, "        div%d_first_digit(d, b, cc, dd);\n", bits);
+    fprintf(f, "        add%d(c, cc, ccc);\n", bits);
+    fprintf(f, "        copy%d(ccc, c);\n", bits);
+    fprintf(f, "        copy%d(dd, d);\n", bits);
+    fprintf(f, "        if (compare%d(d, b) < 0)\n", bits);
+    fprintf(f, "        {\n");
+    fprintf(f, "            if (sa) neg%d(a);\n", bits);
+    fprintf(f, "            if (sb) neg%d(b);\n", bits);
+    fprintf(f, "            if (sa != sb)\n");
+    fprintf(f, "            {\n");
+    fprintf(f, "                neg%d(c);\n", bits);
+    fprintf(f, "            }\n");
+    fprintf(f, "            sd = d[%d] & 0x8000000000000000;\n", bits / 64 - 1);
+    fprintf(f, "            if (sa != sd)\n");
+    fprintf(f, "            {\n");
+    fprintf(f, "                neg%d(d);\n", bits);
+    fprintf(f, "            }\n");
+    fprintf(f, "            return;\n");
+    fprintf(f, "        }\n");
+    fprintf(f, "    }\n");
+    fprintf(f, "}\n\n");
 
-	fprintf(f, "void parse%d(const char *s, INT%d a)\n", bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    int i = 0;\n");
-	fprintf(f, "    int is_negative = 0;\n");
-	fprintf(f, "    INT%d b, c;\n", bits);
-	fprintf(f, "    long long x;\n\n");
+    fprintf(f, "void parse%d(const char *s, INT%d a)\n", bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    int i = 0;\n");
+    fprintf(f, "    int is_negative = 0;\n");
+    fprintf(f, "    INT%d b, c;\n", bits);
+    fprintf(f, "    long long x;\n\n");
 
-	fprintf(f, "    assign%d(a, 0);\n", bits);
-	fprintf(f, "    assign%d(c, 0);\n\n", bits);
+    fprintf(f, "    assign%d(a, 0);\n", bits);
+    fprintf(f, "    assign%d(c, 0);\n\n", bits);
 
-	fprintf(f, "    if (s[i] == '-')\n");
-	fprintf(f, "    {\n");
-	fprintf(f, "        is_negative = 1;\n");
-	fprintf(f, "        i++;\n");
-	fprintf(f, "    }\n\n");
+    fprintf(f, "    if (s[i] == '-')\n");
+    fprintf(f, "    {\n");
+    fprintf(f, "        is_negative = 1;\n");
+    fprintf(f, "        i++;\n");
+    fprintf(f, "    }\n\n");
 
-	fprintf(f, "    while (s[i] >= '0' && s[i] <= '9')\n");
-	fprintf(f, "    {\n");
-	fprintf(f, "        x = s[i] - '0';\n");
-	fprintf(f, "        assign%d(b, x);\n", bits);
-	fprintf(f, "        add%d(c, b, a);\n", bits);
-	fprintf(f, "        mul%d_1(a, 10, c);\n", bits);
-	fprintf(f, "        i++;\n");
-	fprintf(f, "    }\n\n");
+    fprintf(f, "    while (s[i] >= '0' && s[i] <= '9')\n");
+    fprintf(f, "    {\n");
+    fprintf(f, "        x = s[i] - '0';\n");
+    fprintf(f, "        assign%d(b, x);\n", bits);
+    fprintf(f, "        add%d(c, b, a);\n", bits);
+    fprintf(f, "        mul%d_1(a, 10, c);\n", bits);
+    fprintf(f, "        i++;\n");
+    fprintf(f, "    }\n\n");
 
-	fprintf(f, "    if (is_negative)\n");
-	fprintf(f, "    {\n");
-	fprintf(f, "        neg%d(a);\n", bits);
-	fprintf(f, "    }\n");
-	fprintf(f, "}\n\n");
+    fprintf(f, "    if (is_negative)\n");
+    fprintf(f, "    {\n");
+    fprintf(f, "        neg%d(a);\n", bits);
+    fprintf(f, "    }\n");
+    fprintf(f, "}\n\n");
 
-	fclose(f);
+    fclose(f);
 }
 
 void generate_cpp()
 {
-	char s[128];
-	FILE* f = NULL;
+    char s[128];
+    FILE* f = NULL;
 
-	sprintf(s, "cint%d.h", bits);
+    sprintf(s, "cint%d.h", bits);
 
-	printf("generating %s\n", s);
+    printf("generating %s\n", s);
 
-	f = fopen(s, "w");
-	if (f == NULL)
-		error("Cannot open file", s);
+    f = fopen(s, "w");
+    if (f == NULL)
+        error("Cannot open file", s);
 
-	fprintf(f, "#pragma once\n\n");
+    fprintf(f, "#pragma once\n\n");
 
-	fprintf(f, "#include <iostream>\n\n");
+    fprintf(f, "#include <iostream>\n\n");
 
-	fprintf(f, "class int%d\n", bits);
-	fprintf(f, "{\n");
-	fprintf(f, "public:\n");
-	fprintf(f, "    static const int%d min;\n", bits);
-	fprintf(f, "    static const int%d max;\n", bits);
+    fprintf(f, "class int%d\n", bits);
+    fprintf(f, "{\n");
+    fprintf(f, "public:\n");
+    fprintf(f, "    static const int%d min;\n", bits);
+    fprintf(f, "    static const int%d max;\n", bits);
 
-	fprintf(f, "    int%d(long long i = 0);\n", bits);
-	fprintf(f, "    int%d(const long long a[%d]);\n\n", bits, bits / 64);
+    fprintf(f, "    int%d(long long i = 0);\n", bits);
+    fprintf(f, "    int%d(const long long a[%d]);\n\n", bits, bits / 64);
 
-	fprintf(f, "    int%d operator+(const int%d& other) const;\n", bits, bits);
-	fprintf(f, "    int%d operator-(const int%d& other) const;\n", bits, bits);
-	fprintf(f, "    int%d operator*(const int%d& other) const;\n", bits, bits);
-	fprintf(f, "    int%d operator/(const int%d& other) const;\n", bits, bits);
-	fprintf(f, "    int%d operator%%(const int%d& other) const;\n\n", bits, bits);
-
-	fprintf(f, "    bool operator==(const int%d& other) const;\n", bits);
-	fprintf(f, "    bool operator!=(const int%d& other) const;\n", bits);
-	fprintf(f, "    bool operator<(const int%d& other) const;\n", bits);
-	fprintf(f, "    bool operator>(const int%d& other) const;\n", bits);
-	fprintf(f, "    bool operator<=(const int%d& other) const;\n", bits);
-
-	fprintf(f, "    bool operator>=(const int%d& other) const;\n\n", bits);
-
-	fprintf(f, "    int%d operator-() const;\n", bits);
-	fprintf(f, "    int%d operator~() const;\n\n", bits);
-
-	fprintf(f, "    int%d operator&(const int%d& other) const;\n", bits, bits);
-	fprintf(f, "    int%d operator|(const int%d& other) const;\n", bits, bits);
-	fprintf(f, "    int%d operator^(const int%d& other) const;\n\n", bits, bits);
-
-	fprintf(f, "    int%d operator<<(int shift) const;\n", bits);
-	fprintf(f, "    int%d operator>>(int shift) const;\n\n", bits);
-
-	fprintf(f, "    int%d& operator+=(const int%d& other);\n", bits, bits);
-	fprintf(f, "    int%d& operator-=(const int%d& other);\n", bits, bits);
-	fprintf(f, "    int%d& operator*=(const int%d& other);\n", bits, bits);
-	fprintf(f, "    int%d& operator/=(const int%d& other);\n", bits, bits);
-	fprintf(f, "    int%d& operator%%=(const int%d& other);\n\n", bits, bits);
-
-	fprintf(f, "    int%d& operator&=(const int%d& other);\n", bits, bits);
-	fprintf(f, "    int%d& operator|=(const int%d& other);\n", bits, bits);
-	fprintf(f, "    int%d& operator^=(const int%d& other);\n\n", bits, bits);
-
-	fprintf(f, "    int%d& operator<<=(int shift);\n", bits);
-	fprintf(f, "    int%d& operator>>=(int shift);\n\n", bits);
-
-	fprintf(f, "    int%d& operator++();\n", bits);
-	fprintf(f, "    int%d operator++(int);\n", bits);
-	fprintf(f, "    int%d& operator--();\n", bits);
-	fprintf(f, "    int%d operator--(int);\n\n", bits);
-
-	fprintf(f, "    operator bool() const;\n\n");
-
-	fprintf(f, "    bool is_negative() const;\n\n");
-
-	fprintf(f, "    friend std::ostream& operator<<(std::ostream& os, const int%d& i);\n", bits);
-	fprintf(f, "    std::string to_decimal_string() const;\n\n");
-
-	fprintf(f, "private:\n");
-	fprintf(f, "    long long value[%d];\n", bits / 64);
-	fprintf(f, "};\n");
-
-	sprintf(s, "cint%d.cpp", bits);
-
-	printf("generating %s\n", s);
-
-	f = fopen(s, "w");
-	if (f == NULL)
-		error("Cannot open file", s);
-
-	fprintf(f, "#include \"int%d.h\"\n\n", bits);
-	fprintf(f, "#include \"cint%d.h\"\n\n", bits);
-	fprintf(f, "#include <iostream>\n\n");
-
-	fprintf(f, "const int%d int%d::min = INT%d_MIN;\n", bits, bits, bits);
-	fprintf(f, "const int%d int%d::max = INT%d_MAX;\n", bits, bits, bits);
-
-	fprintf(f, "int%d::int%d(long long i)\n", bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    assign%d(value, i);\n", bits);
-	fprintf(f, "}\n\n");
-
-	fprintf(f, "int%d::int%d(const long long a[%d])\n", bits, bits, bits / 64);
-	fprintf(f, "{\n");
-	fprintf(f, "    for (int i = 0; i < %d; i++)\n", bits / 64);
-	fprintf(f, "    {\n");
-	fprintf(f, "        value[i] = a[i];\n");
-	fprintf(f, "    }\n");
-	fprintf(f, "}\n\n");
-
-	fprintf(f, "int%d int%d::operator+(const int%d& other) const\n", bits, bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    int%d result;\n", bits);
-	fprintf(f, "    add%d((long long*)value, (long long*)other.value, result.value);\n", bits);
-	fprintf(f, "    return result;\n");
-	fprintf(f, "}\n\n");
-
-	fprintf(f, "int%d int%d::operator-(const int%d& other) const\n", bits, bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    int%d result;\n", bits);
-	fprintf(f, "    sub%d((long long*)value, (long long*)other.value, result.value);\n", bits);
-	fprintf(f, "    return result;\n");
-	fprintf(f, "}\n\n");
-
-	fprintf(f, "int%d int%d::operator*(const int%d& other) const\n", bits, bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    int%d result;\n", bits);
-	fprintf(f, "    mul%d((long long*)value, (long long*)other.value, result.value);\n", bits);
-	fprintf(f, "    return result;\n");
-	fprintf(f, "}\n\n");
-
-	fprintf(f, "int%d int%d::operator/(const int%d& other) const\n", bits, bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    int%d result;\n", bits);
-	fprintf(f, "    int%d r;\n", bits);
-	fprintf(f, "    div%d((long long*)value, (long long*)other.value, result.value, r.value);\n", bits);
-	fprintf(f, "    return result;\n");
-	fprintf(f, "}\n\n");
-
-	fprintf(f, "int%d int%d::operator%%(const int%d& other) const\n", bits, bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    int%d c, r;\n", bits);
-	fprintf(f, "    div%d((long long*)value, (long long*)other.value, c.value, r.value);\n", bits);
-	fprintf(f, "    return r;\n");
-	fprintf(f, "}\n\n");
-
-	fprintf(f, "bool int%d::operator==(const int%d& other) const\n", bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    return compare%d(value, other.value) == 0;\n", bits);
-	fprintf(f, "}\n\n");
-
-	fprintf(f, "bool int%d::operator!=(const int%d& other) const\n", bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    return compare%d(value, other.value) != 0;\n", bits);
-	fprintf(f, "}\n\n");
-
-	fprintf(f, "bool int%d::operator<(const int%d& other) const\n", bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    return compare%d(value, other.value) < 0;\n", bits);
-	fprintf(f, "}\n\n");
-
-	fprintf(f, "bool int%d::operator>(const int%d& other) const\n", bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    return compare%d(value, other.value) > 0;\n", bits);
-	fprintf(f, "}\n\n");
-
-	fprintf(f, "bool int%d::operator<=(const int%d& other) const\n", bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    return compare%d(value, other.value) <= 0;\n", bits);
-	fprintf(f, "}\n\n");
-
-	fprintf(f, "bool int%d::operator>=(const int%d& other) const\n", bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    return compare%d(value, other.value) >= 0;\n", bits);
-	fprintf(f, "}\n\n");
-
-	fprintf(f, "int%d int%d::operator-() const\n", bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    int%d result = *this;\n", bits);
-	fprintf(f, "    neg%d(result.value);\n", bits);
-	fprintf(f, "    return result;\n");
-	fprintf(f, "}\n\n");
-
-	fprintf(f, "int%d int%d::operator~() const\n", bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    int%d result = *this;\n", bits);
-	fprintf(f, "    not%d(result.value);\n", bits);
-	fprintf(f, "    return result;\n");
-	fprintf(f, "}\n\n");
-
-	fprintf(f, "int%d int%d::operator&(const int%d& other) const\n", bits, bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    int%d result;\n", bits);
-	fprintf(f, "    and%d((long long*)value, (long long*)other.value, result.value);\n", bits);
-	fprintf(f, "    return result;\n");
-	fprintf(f, "}\n\n");
-
-	fprintf(f, "int%d int%d::operator|(const int%d& other) const\n", bits, bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    int%d result;\n", bits);
-	fprintf(f, "    or%d((long long*)value, (long long*)other.value, result.value);\n", bits);
-	fprintf(f, "    return result;\n");
-	fprintf(f, "}\n\n");
-
-	fprintf(f, "int%d int%d::operator^(const int%d& other) const\n", bits, bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    int%d result;\n", bits);
-	fprintf(f, "    xor%d((long long*)value, (long long*)other.value, result.value);\n", bits);
-	fprintf(f, "    return result;\n");
-	fprintf(f, "}\n\n");
-
-	fprintf(f, "int%d int%d::operator<<(int shift) const\n", bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    int%d result = *this;\n", bits);
-	fprintf(f, "    shl%d(result.value, shift);\n", bits);
-	fprintf(f, "    return result;\n");
-	fprintf(f, "}\n\n");
-
-	fprintf(f, "int%d int%d::operator>>(int shift) const\n", bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    int%d result = *this;\n", bits);
-	fprintf(f, "    shr%d(result.value, shift);\n", bits);
-	fprintf(f, "    return result;\n");
-	fprintf(f, "}\n\n");
-
-	fprintf(f, "int%d& int%d::operator+=(const int%d& other)\n", bits, bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    *this = *this + other;\n");
-	fprintf(f, "    return *this;\n");
-	fprintf(f, "}\n\n");
-
-	fprintf(f, "int%d& int%d::operator-=(const int%d& other)\n", bits, bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    *this = *this - other;\n");
-	fprintf(f, "    return *this;\n");
-	fprintf(f, "}\n\n");
-
-	fprintf(f, "int%d& int%d::operator*=(const int%d& other)\n", bits, bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    *this = *this * other;\n");
-	fprintf(f, "    return *this;\n");
-	fprintf(f, "}\n\n");
-
-	fprintf(f, "int%d& int%d::operator/=(const int%d& other)\n", bits, bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    *this = *this / other;\n");
-	fprintf(f, "    return *this;\n");
-	fprintf(f, "}\n\n");
-
-	fprintf(f, "int%d& int%d::operator%%=(const int%d& other)\n", bits, bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    *this = *this %% other;\n");
-	fprintf(f, "    return *this;\n");
-	fprintf(f, "}\n\n");
-
-	fprintf(f, "int%d& int%d::operator&=(const int%d& other)\n", bits, bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    *this = *this & other;\n");
-	fprintf(f, "    return *this;\n");
-	fprintf(f, "}\n\n");
-
-	fprintf(f, "int%d& int%d::operator|=(const int%d& other)\n", bits, bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    *this = *this | other;\n");
-	fprintf(f, "    return *this;\n");
-	fprintf(f, "}\n\n");
-
-	fprintf(f, "int%d& int%d::operator^=(const int%d& other)\n", bits, bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    *this = *this ^ other;\n");
-	fprintf(f, "    return *this;\n");
-	fprintf(f, "}\n\n");
-
-	fprintf(f, "int%d& int%d::operator<<=(int shift)\n", bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    *this = *this << shift;\n");
-	fprintf(f, "    return *this;\n");
-	fprintf(f, "}\n\n");
-
-	fprintf(f, "int%d& int%d::operator>>=(int shift)\n", bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    *this = *this >> shift;\n");
-	fprintf(f, "    return *this;\n");
-	fprintf(f, "}\n\n");
-
-	fprintf(f, "int%d& int%d::operator++()\n", bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    *this = *this + int%d(1);\n", bits);
-	fprintf(f, "    return *this;\n");
-	fprintf(f, "}\n\n");
-
-	fprintf(f, "int%d int%d::operator++(int)\n", bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    int%d result(*this);\n", bits);
-	fprintf(f, "    *this = *this + int%d(1);\n", bits);
-	fprintf(f, "    return result;\n");
-
-	fprintf(f, "}\n\n");
-
-	fprintf(f, "int%d& int%d::operator--()\n", bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    *this = *this - int%d(1);\n", bits);
-	fprintf(f, "    return *this;\n");
-	fprintf(f, "}\n\n");
-
-	fprintf(f, "int%d int%d::operator--(int)\n", bits, bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    int%d result(*this);\n", bits);
-	fprintf(f, "    *this = *this - int%d(1);\n", bits);
-	fprintf(f, "    return result;\n");
-	fprintf(f, "}\n\n");
-
-	fprintf(f, "int%d::operator bool() const\n", bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    return compare%d(value, INT%d_ZERO) != 0;\n", bits, bits);
-	fprintf(f, "}\n\n");
-
-	fprintf(f, "bool int%d::is_negative() const\n", bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    return is_negative%d((long long*)value);\n", bits);
-	fprintf(f, "}\n\n");
-
-	fprintf(f, "std::ostream& operator<<(std::ostream& os, const int%d& i)\n", bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    os << i.to_decimal_string();\n");
-	fprintf(f, "    return os;\n");
-	fprintf(f, "}\n\n");
-
-	fprintf(f, "std::string int%d::to_decimal_string() const\n", bits);
-	fprintf(f, "{\n");
-	fprintf(f, "    char buf[%d / 3 + 1];\n", bits);
-	fprintf(f, "    return ::to_decimal_string%d(value, buf, sizeof(buf));\n", bits);
-	fprintf(f, "}\n\n");
-
-	fclose(f);
+    fprintf(f, "    int%d operator+(const int%d& other) const;\n", bits, bits);
+    fprintf(f, "    int%d operator-(const int%d& other) const;\n", bits, bits);
+    fprintf(f, "    int%d operator*(const int%d& other) const;\n", bits, bits);
+    fprintf(f, "    int%d operator/(const int%d& other) const;\n", bits, bits);
+    fprintf(f, "    int%d operator%%(const int%d& other) const;\n\n", bits, bits);
+
+    fprintf(f, "    bool operator==(const int%d& other) const;\n", bits);
+    fprintf(f, "    bool operator!=(const int%d& other) const;\n", bits);
+    fprintf(f, "    bool operator<(const int%d& other) const;\n", bits);
+    fprintf(f, "    bool operator>(const int%d& other) const;\n", bits);
+    fprintf(f, "    bool operator<=(const int%d& other) const;\n", bits);
+
+    fprintf(f, "    bool operator>=(const int%d& other) const;\n\n", bits);
+
+    fprintf(f, "    int%d operator-() const;\n", bits);
+    fprintf(f, "    int%d operator~() const;\n\n", bits);
+
+    fprintf(f, "    int%d operator&(const int%d& other) const;\n", bits, bits);
+    fprintf(f, "    int%d operator|(const int%d& other) const;\n", bits, bits);
+    fprintf(f, "    int%d operator^(const int%d& other) const;\n\n", bits, bits);
+
+    fprintf(f, "    int%d operator<<(int shift) const;\n", bits);
+    fprintf(f, "    int%d operator>>(int shift) const;\n\n", bits);
+
+    fprintf(f, "    int%d& operator+=(const int%d& other);\n", bits, bits);
+    fprintf(f, "    int%d& operator-=(const int%d& other);\n", bits, bits);
+    fprintf(f, "    int%d& operator*=(const int%d& other);\n", bits, bits);
+    fprintf(f, "    int%d& operator/=(const int%d& other);\n", bits, bits);
+    fprintf(f, "    int%d& operator%%=(const int%d& other);\n\n", bits, bits);
+
+    fprintf(f, "    int%d& operator&=(const int%d& other);\n", bits, bits);
+    fprintf(f, "    int%d& operator|=(const int%d& other);\n", bits, bits);
+    fprintf(f, "    int%d& operator^=(const int%d& other);\n\n", bits, bits);
+
+    fprintf(f, "    int%d& operator<<=(int shift);\n", bits);
+    fprintf(f, "    int%d& operator>>=(int shift);\n\n", bits);
+
+    fprintf(f, "    int%d& operator++();\n", bits);
+    fprintf(f, "    int%d operator++(int);\n", bits);
+    fprintf(f, "    int%d& operator--();\n", bits);
+    fprintf(f, "    int%d operator--(int);\n\n", bits);
+
+    fprintf(f, "    operator bool() const;\n\n");
+
+    fprintf(f, "    bool is_negative() const;\n\n");
+
+    fprintf(f, "    friend std::ostream& operator<<(std::ostream& os, const int%d& i);\n", bits);
+    fprintf(f, "    std::string to_decimal_string() const;\n\n");
+
+    fprintf(f, "private:\n");
+    fprintf(f, "    long long value[%d];\n", bits / 64);
+    fprintf(f, "};\n");
+
+    sprintf(s, "cint%d.cpp", bits);
+
+    printf("generating %s\n", s);
+
+    f = fopen(s, "w");
+    if (f == NULL)
+        error("Cannot open file", s);
+
+    fprintf(f, "#include \"int%d.h\"\n\n", bits);
+    fprintf(f, "#include \"cint%d.h\"\n\n", bits);
+    fprintf(f, "#include <iostream>\n\n");
+
+    fprintf(f, "const int%d int%d::min = INT%d_MIN;\n", bits, bits, bits);
+    fprintf(f, "const int%d int%d::max = INT%d_MAX;\n", bits, bits, bits);
+
+    fprintf(f, "int%d::int%d(long long i)\n", bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    assign%d(value, i);\n", bits);
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "int%d::int%d(const long long a[%d])\n", bits, bits, bits / 64);
+    fprintf(f, "{\n");
+    fprintf(f, "    for (int i = 0; i < %d; i++)\n", bits / 64);
+    fprintf(f, "    {\n");
+    fprintf(f, "        value[i] = a[i];\n");
+    fprintf(f, "    }\n");
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "int%d int%d::operator+(const int%d& other) const\n", bits, bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    int%d result;\n", bits);
+    fprintf(f, "    add%d((long long*)value, (long long*)other.value, result.value);\n", bits);
+    fprintf(f, "    return result;\n");
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "int%d int%d::operator-(const int%d& other) const\n", bits, bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    int%d result;\n", bits);
+    fprintf(f, "    sub%d((long long*)value, (long long*)other.value, result.value);\n", bits);
+    fprintf(f, "    return result;\n");
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "int%d int%d::operator*(const int%d& other) const\n", bits, bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    int%d result;\n", bits);
+    fprintf(f, "    mul%d((long long*)value, (long long*)other.value, result.value);\n", bits);
+    fprintf(f, "    return result;\n");
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "int%d int%d::operator/(const int%d& other) const\n", bits, bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    int%d result;\n", bits);
+    fprintf(f, "    int%d r;\n", bits);
+    fprintf(f, "    div%d((long long*)value, (long long*)other.value, result.value, r.value);\n", bits);
+    fprintf(f, "    return result;\n");
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "int%d int%d::operator%%(const int%d& other) const\n", bits, bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    int%d c, r;\n", bits);
+    fprintf(f, "    div%d((long long*)value, (long long*)other.value, c.value, r.value);\n", bits);
+    fprintf(f, "    return r;\n");
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "bool int%d::operator==(const int%d& other) const\n", bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    return compare%d(value, other.value) == 0;\n", bits);
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "bool int%d::operator!=(const int%d& other) const\n", bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    return compare%d(value, other.value) != 0;\n", bits);
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "bool int%d::operator<(const int%d& other) const\n", bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    return compare%d(value, other.value) < 0;\n", bits);
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "bool int%d::operator>(const int%d& other) const\n", bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    return compare%d(value, other.value) > 0;\n", bits);
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "bool int%d::operator<=(const int%d& other) const\n", bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    return compare%d(value, other.value) <= 0;\n", bits);
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "bool int%d::operator>=(const int%d& other) const\n", bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    return compare%d(value, other.value) >= 0;\n", bits);
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "int%d int%d::operator-() const\n", bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    int%d result = *this;\n", bits);
+    fprintf(f, "    neg%d(result.value);\n", bits);
+    fprintf(f, "    return result;\n");
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "int%d int%d::operator~() const\n", bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    int%d result = *this;\n", bits);
+    fprintf(f, "    not%d(result.value);\n", bits);
+    fprintf(f, "    return result;\n");
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "int%d int%d::operator&(const int%d& other) const\n", bits, bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    int%d result;\n", bits);
+    fprintf(f, "    and%d((long long*)value, (long long*)other.value, result.value);\n", bits);
+    fprintf(f, "    return result;\n");
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "int%d int%d::operator|(const int%d& other) const\n", bits, bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    int%d result;\n", bits);
+    fprintf(f, "    or%d((long long*)value, (long long*)other.value, result.value);\n", bits);
+    fprintf(f, "    return result;\n");
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "int%d int%d::operator^(const int%d& other) const\n", bits, bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    int%d result;\n", bits);
+    fprintf(f, "    xor%d((long long*)value, (long long*)other.value, result.value);\n", bits);
+    fprintf(f, "    return result;\n");
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "int%d int%d::operator<<(int shift) const\n", bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    int%d result = *this;\n", bits);
+    fprintf(f, "    shl%d(result.value, shift);\n", bits);
+    fprintf(f, "    return result;\n");
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "int%d int%d::operator>>(int shift) const\n", bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    int%d result = *this;\n", bits);
+    fprintf(f, "    shr%d(result.value, shift);\n", bits);
+    fprintf(f, "    return result;\n");
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "int%d& int%d::operator+=(const int%d& other)\n", bits, bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    *this = *this + other;\n");
+    fprintf(f, "    return *this;\n");
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "int%d& int%d::operator-=(const int%d& other)\n", bits, bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    *this = *this - other;\n");
+    fprintf(f, "    return *this;\n");
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "int%d& int%d::operator*=(const int%d& other)\n", bits, bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    *this = *this * other;\n");
+    fprintf(f, "    return *this;\n");
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "int%d& int%d::operator/=(const int%d& other)\n", bits, bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    *this = *this / other;\n");
+    fprintf(f, "    return *this;\n");
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "int%d& int%d::operator%%=(const int%d& other)\n", bits, bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    *this = *this %% other;\n");
+    fprintf(f, "    return *this;\n");
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "int%d& int%d::operator&=(const int%d& other)\n", bits, bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    *this = *this & other;\n");
+    fprintf(f, "    return *this;\n");
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "int%d& int%d::operator|=(const int%d& other)\n", bits, bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    *this = *this | other;\n");
+    fprintf(f, "    return *this;\n");
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "int%d& int%d::operator^=(const int%d& other)\n", bits, bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    *this = *this ^ other;\n");
+    fprintf(f, "    return *this;\n");
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "int%d& int%d::operator<<=(int shift)\n", bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    *this = *this << shift;\n");
+    fprintf(f, "    return *this;\n");
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "int%d& int%d::operator>>=(int shift)\n", bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    *this = *this >> shift;\n");
+    fprintf(f, "    return *this;\n");
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "int%d& int%d::operator++()\n", bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    *this = *this + int%d(1);\n", bits);
+    fprintf(f, "    return *this;\n");
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "int%d int%d::operator++(int)\n", bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    int%d result(*this);\n", bits);
+    fprintf(f, "    *this = *this + int%d(1);\n", bits);
+    fprintf(f, "    return result;\n");
+
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "int%d& int%d::operator--()\n", bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    *this = *this - int%d(1);\n", bits);
+    fprintf(f, "    return *this;\n");
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "int%d int%d::operator--(int)\n", bits, bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    int%d result(*this);\n", bits);
+    fprintf(f, "    *this = *this - int%d(1);\n", bits);
+    fprintf(f, "    return result;\n");
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "int%d::operator bool() const\n", bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    return compare%d(value, INT%d_ZERO) != 0;\n", bits, bits);
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "bool int%d::is_negative() const\n", bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    return is_negative%d((long long*)value);\n", bits);
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "std::ostream& operator<<(std::ostream& os, const int%d& i)\n", bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    os << i.to_decimal_string();\n");
+    fprintf(f, "    return os;\n");
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "std::string int%d::to_decimal_string() const\n", bits);
+    fprintf(f, "{\n");
+    fprintf(f, "    char buf[%d / 3 + 1];\n", bits);
+    fprintf(f, "    return ::to_decimal_string%d(value, buf, sizeof(buf));\n", bits);
+    fprintf(f, "}\n\n");
+
+    fclose(f);
 }
 
 void generate_example_c()
 {
-	char s[128];
-	FILE* f = NULL;
+    char s[128];
+    FILE* f = NULL;
 
-	sprintf(s, "example_int%d.c", bits);
+    sprintf(s, "example_int%d.c", bits);
 
-	printf("generating %s\n", s);
+    printf("generating %s\n", s);
 
-	f = fopen(s, "w");
-	if (f == NULL)
-		error("Cannot open file", s);
+    f = fopen(s, "w");
+    if (f == NULL)
+        error("Cannot open file", s);
 
-	fprintf(f, "#include <stdio.h>\n");
-	fprintf(f, "#include <string.h>\n");
-	fprintf(f, "#include \"int%d.h\"\n\n", bits);
+    fprintf(f, "#include <stdio.h>\n");
+    fprintf(f, "#include <string.h>\n");
+    fprintf(f, "#include \"int%d.h\"\n\n", bits);
 
-	fprintf(f, "void fibonacci()\n");
-	fprintf(f, "{\n");
-	fprintf(f, "    INT%d a, b, c;\n", bits);
-	fprintf(f, "    char buf[%d / 3 + 2], *s;\n\n", bits);
-	fprintf(f, "    assign%d(a, 0);\n", bits);
-	fprintf(f, "    assign%d(b, 1);\n\n", bits);
-	fprintf(f, "    printf(\"Fibonacci sequence using INT%d\\n\");\n\n", bits);
-	fprintf(f, "    for (int i = 0; compare%d(a, b) <= 0; i++)\n", bits);
-	fprintf(f, "    {\n");
-	fprintf(f, "        s = to_decimal_string%d(b, buf, sizeof(buf));\n", bits);
-	fprintf(f, "        printf(\"%%d: %%s\\n\", i, s);\n\n");
-	fprintf(f, "        add%d(a, b, c);\n", bits);
-	fprintf(f, "        copy%d(b, a);\n", bits);
-	fprintf(f, "        copy%d(c, b);\n", bits);
-	fprintf(f, "    }\n");
-	fprintf(f, "}\n\n");
+    fprintf(f, "void fibonacci()\n");
+    fprintf(f, "{\n");
+    fprintf(f, "    INT%d a, b, c;\n", bits);
+    fprintf(f, "    char buf[%d / 3 + 2], *s;\n\n", bits);
+    fprintf(f, "    assign%d(a, 0);\n", bits);
+    fprintf(f, "    assign%d(b, 1);\n\n", bits);
+    fprintf(f, "    printf(\"Fibonacci sequence using INT%d\\n\");\n\n", bits);
+    fprintf(f, "    for (int i = 0; compare%d(a, b) <= 0; i++)\n", bits);
+    fprintf(f, "    {\n");
+    fprintf(f, "        s = to_decimal_string%d(b, buf, sizeof(buf));\n", bits);
+    fprintf(f, "        printf(\"%%d: %%s\\n\", i, s);\n\n");
+    fprintf(f, "        add%d(a, b, c);\n", bits);
+    fprintf(f, "        copy%d(b, a);\n", bits);
+    fprintf(f, "        copy%d(c, b);\n", bits);
+    fprintf(f, "    }\n");
+    fprintf(f, "}\n\n");
 
-	fprintf(f, "int main()\n");
-	fprintf(f, "{\n");
-	fprintf(f, "    fibonacci();\n");
-	fprintf(f, "}\n");
+    fprintf(f, "int main()\n");
+    fprintf(f, "{\n");
+    fprintf(f, "    fibonacci();\n");
+    fprintf(f, "}\n");
 
-	fclose(f);
+    fclose(f);
 }
 
 void generate_test_c()
 {
-	char s[128];
-	FILE* f = NULL;
+    char s[128];
+    FILE* f = NULL;
 
-	sprintf(s, "test_int%d.c", bits);
+    sprintf(s, "test_int%d.c", bits);
 
-	printf("generating %s\n", s);
+    printf("generating %s\n", s);
 
-	f = fopen(s, "w");
-	if (f == NULL)
-		error("Cannot open file", s);
+    f = fopen(s, "w");
+    if (f == NULL)
+        error("Cannot open file", s);
 
-	fprintf(f, "#include <stdio.h>\n");
-	fprintf(f, "#include <assert.h>\n");
-	fprintf(f, "#include <string.h>\n");
-	fprintf(f, "#include \"int%d.h\"\n\n", bits);
+    fprintf(f, "#include <stdio.h>\n");
+    fprintf(f, "#include <assert.h>\n");
+    fprintf(f, "#include <string.h>\n");
+    fprintf(f, "#include \"int%d.h\"\n\n", bits);
 
-	fprintf(f, "int main()\n");
-	fprintf(f, "{\n");
+    fprintf(f, "int main()\n");
+    fprintf(f, "{\n");
 
-	fprintf(f, "    INT%d a, b, c, r, aa, bb, cc, rr;\n", bits);
-	fprintf(f, "    INT%d zero, one, minus_one;\n", bits);
-	fprintf(f, "    char buf[%d / 3 + 2];\n", bits);
-	fprintf(f, "    char *s;\n");
-	fprintf(f, "    long long rem;\n\n");
+    fprintf(f, "    INT%d a, b, c, r, aa, bb, cc, rr;\n", bits);
+    fprintf(f, "    INT%d zero, one, minus_one;\n", bits);
+    fprintf(f, "    char buf[%d / 3 + 2];\n", bits);
+    fprintf(f, "    char *s;\n");
+    fprintf(f, "    long long rem;\n\n");
 
-	fprintf(f, "    assign%d(zero, 0);\n", bits);
-	fprintf(f, "    assign%d(one, 1);\n", bits);
-	fprintf(f, "    assign%d(minus_one, -1);\n\n", bits);
+    fprintf(f, "    assign%d(zero, 0);\n", bits);
+    fprintf(f, "    assign%d(one, 1);\n", bits);
+    fprintf(f, "    assign%d(minus_one, -1);\n\n", bits);
 
-	/* test assign */
+    /* test assign */
 
-	fprintf(f, "    /* test assign */\n\n");
-	fprintf(f, "    printf(\"test assign\\n\");\n");
+    fprintf(f, "    /* test assign */\n\n");
+    fprintf(f, "    printf(\"test assign\\n\");\n");
 
-	fprintf(f, "    assign%d(a, 0);\n", bits);
-	fprintf(f, "    assert(compare%d(a, zero) == 0);\n\n", bits);
+    fprintf(f, "    assign%d(a, 0);\n", bits);
+    fprintf(f, "    assert(compare%d(a, zero) == 0);\n\n", bits);
 
-	fprintf(f, "    assign%d(a, 1);\n", bits);
-	fprintf(f, "    assert(compare%d(a, one) == 0);\n\n", bits);
+    fprintf(f, "    assign%d(a, 1);\n", bits);
+    fprintf(f, "    assert(compare%d(a, one) == 0);\n\n", bits);
 
-	fprintf(f, "    assign%d(a, -1);\n", bits);
-	fprintf(f, "    assert(compare%d(a, minus_one) == 0);\n\n", bits);
+    fprintf(f, "    assign%d(a, -1);\n", bits);
+    fprintf(f, "    assert(compare%d(a, minus_one) == 0);\n\n", bits);
 
-	fprintf(f, "    assign%d(a, 42);\n", bits);
-	fprintf(f, "    assign%d(aa, 42);\n", bits);
-	fprintf(f, "    assert(compare%d(a, aa) == 0);\n\n", bits);
+    fprintf(f, "    assign%d(a, 42);\n", bits);
+    fprintf(f, "    assign%d(aa, 42);\n", bits);
+    fprintf(f, "    assert(compare%d(a, aa) == 0);\n\n", bits);
 
-	/* test copy */
+    /* test copy */
 
-	fprintf(f, "    /* test copy */\n\n");
-	fprintf(f, "    printf(\"test copy\\n\");\n");
+    fprintf(f, "    /* test copy */\n\n");
+    fprintf(f, "    printf(\"test copy\\n\");\n");
 
-	fprintf(f, "    assign%d(a, 12345);\n", bits);
-	fprintf(f, "    copy%d(a, b);\n", bits);
-	fprintf(f, "    assert(compare%d(a, b) == 0);\n\n", bits);
+    fprintf(f, "    assign%d(a, 12345);\n", bits);
+    fprintf(f, "    copy%d(a, b);\n", bits);
+    fprintf(f, "    assert(compare%d(a, b) == 0);\n\n", bits);
 
-	fprintf(f, "    copy%d(INT%d_MIN, a);\n", bits, bits);
-	fprintf(f, "    copy%d(a, b);\n", bits);
-	fprintf(f, "    assert(compare%d(a, b) == 0);\n\n", bits);
+    fprintf(f, "    copy%d(INT%d_MIN, a);\n", bits, bits);
+    fprintf(f, "    copy%d(a, b);\n", bits);
+    fprintf(f, "    assert(compare%d(a, b) == 0);\n\n", bits);
 
-	fprintf(f, "    copy%d(INT%d_MAX, a);\n", bits, bits);
-	fprintf(f, "    copy%d(a, b);\n", bits);
-	fprintf(f, "    assert(compare%d(a, b) == 0);\n\n", bits);
+    fprintf(f, "    copy%d(INT%d_MAX, a);\n", bits, bits);
+    fprintf(f, "    copy%d(a, b);\n", bits);
+    fprintf(f, "    assert(compare%d(a, b) == 0);\n\n", bits);
 
-	/* test compare */
+    /* test compare */
 
-	fprintf(f, "    /* test compare */\n\n");
-	fprintf(f, "    printf(\"test compare\\n\");\n");
+    fprintf(f, "    /* test compare */\n\n");
+    fprintf(f, "    printf(\"test compare\\n\");\n");
 
-	fprintf(f, "    assign%d(a, 1);\n", bits);
-	fprintf(f, "    assign%d(b, 2);\n", bits);
-	fprintf(f, "    assert(compare%d(a, b) < 0);\n", bits);
-	fprintf(f, "    assert(compare%d(b, a) > 0);\n", bits);
-	fprintf(f, "    assert(compare%d(a, a) == 0);\n\n", bits);
-
-	fprintf(f, "    assign%d(a, -1);\n", bits);
-	fprintf(f, "    assign%d(b, 1);\n", bits);
-	fprintf(f, "    assert(compare%d(a, b) < 0);\n", bits);
-	fprintf(f, "    assert(compare%d(b, a) > 0);\n\n", bits);
-
-	fprintf(f, "    assign%d(a, -2);\n", bits);
-	fprintf(f, "    assign%d(b, -1);\n", bits);
-	fprintf(f, "    assert(compare%d(a, b) < 0);\n", bits);
-	fprintf(f, "    assert(compare%d(b, a) > 0);\n\n", bits);
-
-	fprintf(f, "    copy%d(INT%d_MIN, a);\n", bits, bits);
-	fprintf(f, "    copy%d(INT%d_MAX, b);\n", bits, bits);
-	fprintf(f, "    assert(compare%d(a, b) < 0);\n", bits);
-	fprintf(f, "    assert(compare%d(b, a) > 0);\n\n", bits);
-
-	/* test is_negative */
-
-	fprintf(f, "    /* test is_negative */\n\n");
-	fprintf(f, "    printf(\"test is_negative\\n\");\n");
-
-	fprintf(f, "    assign%d(a, 0);\n", bits);
-	fprintf(f, "    assert(is_negative%d(a) == 0);\n\n", bits);
-
-	fprintf(f, "    assign%d(a, 1);\n", bits);
-	fprintf(f, "    assert(is_negative%d(a) == 0);\n\n", bits);
-
-	fprintf(f, "    assign%d(a, -1);\n", bits);
-	fprintf(f, "    assert(is_negative%d(a) == 1);\n\n", bits);
-
-	fprintf(f, "    copy%d(INT%d_MIN, a);\n", bits, bits);
-	fprintf(f, "    assert(is_negative%d(a) == 1);\n\n", bits);
-
-	fprintf(f, "    copy%d(INT%d_MAX, a);\n", bits, bits);
-	fprintf(f, "    assert(is_negative%d(a) == 0);\n\n", bits);
-
-	/* test neg */
-
-	fprintf(f, "    /* test neg */\n\n");
-	fprintf(f, "    printf(\"test neg\\n\");\n");
-
-	fprintf(f, "    assign%d(a, 1);\n", bits);
-	fprintf(f, "    neg%d(a);\n", bits);
-	fprintf(f, "    assert(compare%d(a, minus_one) == 0);\n\n", bits);
-
-	fprintf(f, "    assign%d(a, -1);\n", bits);
-	fprintf(f, "    neg%d(a);\n", bits);
-	fprintf(f, "    assert(compare%d(a, one) == 0);\n\n", bits);
-
-	fprintf(f, "    assign%d(a, 0);\n", bits);
-	fprintf(f, "    neg%d(a);\n", bits);
-	fprintf(f, "    assert(compare%d(a, zero) == 0);\n\n", bits);
-
-	fprintf(f, "    copy%d(INT%d_MIN, a);\n", bits, bits);
-	fprintf(f, "    neg%d(a);\n", bits);
-	fprintf(f, "    assert(compare%d(a, INT%d_MIN) == 0);\n\n", bits, bits);
-
-	/* test add */
-
-	fprintf(f, "    /* test add */\n\n");
-	fprintf(f, "    printf(\"test add\\n\");\n");
-
-	fprintf(f, "    assign%d(a, 1);\n", bits);
-	fprintf(f, "    copy%d(a, aa);\n", bits);
-	fprintf(f, "    assign%d(b, 2);\n", bits);
-	fprintf(f, "    copy%d(b, bb);\n", bits);
-	fprintf(f, "    add%d(a, b, c);\n", bits);
-	fprintf(f, "    assign%d(cc, 3);\n", bits);
-	fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
-
-	fprintf(f, "    assign%d(a, 1);\n", bits);
-	fprintf(f, "    copy%d(a, aa);\n", bits);
-	fprintf(f, "    assign%d(b, -2);\n", bits);
-	fprintf(f, "    copy%d(b, bb);\n", bits);
-	fprintf(f, "    add%d(a, b, c);\n", bits);
-	fprintf(f, "    assign%d(cc, -1);\n", bits);
-	fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
-
-	fprintf(f, "    assign%d(a, -2);\n", bits);
-	fprintf(f, "    copy%d(a, aa);\n", bits);
-	fprintf(f, "    assign%d(b, 1);\n", bits);
-	fprintf(f, "    copy%d(b, bb);\n", bits);
-	fprintf(f, "    add%d(a, b, c);\n", bits);
-	fprintf(f, "    assign%d(cc, -1);\n", bits);
-	fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
-
-	fprintf(f, "    copy%d(INT%d_MAX, a);\n", bits, bits);
-	fprintf(f, "    copy%d(a, aa);\n", bits);
-	fprintf(f, "    assign%d(b, 1);\n", bits);
-	fprintf(f, "    copy%d(b, bb);\n", bits);
-	fprintf(f, "    add%d(a, b, c);\n", bits);
-	fprintf(f, "    copy%d(INT%d_MIN, cc);\n", bits, bits);
-	fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
-
-	fprintf(f, "    copy%d(INT%d_MIN, a);\n", bits, bits);
-	fprintf(f, "    copy%d(a, aa);\n", bits);
-	fprintf(f, "    assign%d(b, -1);\n", bits);
-	fprintf(f, "    copy%d(b, bb);\n", bits);
-	fprintf(f, "    add%d(a, b, c);\n", bits);
-	fprintf(f, "    copy%d(INT%d_MAX, cc);\n", bits, bits);
-	fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
-
-	fprintf(f, "    copy%d(INT%d_MIN, a);\n", bits, bits);
-	fprintf(f, "    copy%d(a, aa);\n", bits);
-	fprintf(f, "    copy%d(INT%d_MIN, b);\n", bits, bits);
-	fprintf(f, "    copy%d(b, bb);\n", bits);
-	fprintf(f, "    add%d(a, b, c);\n", bits);
-	fprintf(f, "    assign%d(cc, 0);\n", bits);
-	fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
-
-	fprintf(f, "    copy%d(INT%d_MAX, a);\n", bits, bits);
-	fprintf(f, "    copy%d(a, aa);\n", bits);
-	fprintf(f, "    copy%d(INT%d_MAX, b);\n", bits, bits);
-	fprintf(f, "    copy%d(b, bb);\n", bits);
-	fprintf(f, "    add%d(a, b, c);\n", bits);
-	fprintf(f, "    assign%d(cc, -2);\n", bits);
-	fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
-
-	/* test sub */
-
-	fprintf(f, "    /* test sub */\n\n");
-	fprintf(f, "    printf(\"test sub\\n\");\n");
-
-	fprintf(f, "    assign%d(a, 1);\n", bits);
-	fprintf(f, "    copy%d(a, aa);\n", bits);
-	fprintf(f, "    assign%d(b, 2);\n", bits);
-	fprintf(f, "    copy%d(b, bb);\n", bits);
-	fprintf(f, "    sub%d(a, b, c);\n", bits);
-	fprintf(f, "    assign%d(cc, -1);\n", bits);
-	fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
-
-	fprintf(f, "    copy%d(INT%d_MIN, a);\n", bits, bits);
-	fprintf(f, "    copy%d(a, aa);\n", bits);
-	fprintf(f, "    assign%d(b, 1);\n", bits);
-	fprintf(f, "    copy%d(b, bb);\n", bits);
-	fprintf(f, "    sub%d(a, b, c);\n", bits);
-	fprintf(f, "    copy%d(INT%d_MAX, cc);\n", bits, bits);
-	fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
-
-	fprintf(f, "    copy%d(INT%d_MAX, a);\n", bits, bits);
-	fprintf(f, "    copy%d(a, aa);\n", bits);
-	fprintf(f, "    assign%d(b, -1);\n", bits);
-	fprintf(f, "    copy%d(b, bb);\n", bits);
-	fprintf(f, "    sub%d(a, b, c);\n", bits);
-	fprintf(f, "    copy%d(INT%d_MIN, cc);\n", bits, bits);
-	fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
-
-	fprintf(f, "    copy%d(INT%d_MIN, a);\n", bits, bits);
-	fprintf(f, "    copy%d(a, aa);\n", bits);
-	fprintf(f, "    copy%d(INT%d_MIN, b);\n", bits, bits);
-	fprintf(f, "    copy%d(b, bb);\n", bits);
-	fprintf(f, "    sub%d(a, b, c);\n", bits);
-	fprintf(f, "    assign%d(cc, 0);\n", bits);
-	fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
-
-	fprintf(f, "    copy%d(INT%d_MAX, a);\n", bits, bits);
-	fprintf(f, "    copy%d(a, aa);\n", bits);
-	fprintf(f, "    copy%d(INT%d_MAX, b);\n", bits, bits);
-	fprintf(f, "    copy%d(b, bb);\n", bits);
-	fprintf(f, "    sub%d(a, b, c);\n", bits);
-	fprintf(f, "    assign%d(cc, 0);\n", bits);
-	fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
-
-	/* test mul_1 */
-
-	fprintf(f, "    /* test mul%d_1 */\n\n", bits);
-	fprintf(f, "    printf(\"test mul_1\\n\");\n");
-
-	fprintf(f, "    assign%d(a, 7);\n", bits);
-	fprintf(f, "    mul%d_1(a, 6, c);\n", bits);
-	fprintf(f, "    assign%d(cc, 42);\n", bits);
-	fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
-
-	fprintf(f, "    assign%d(a, 0);\n", bits);
-	fprintf(f, "    mul%d_1(a, 999, c);\n", bits);
-	fprintf(f, "    assert(compare%d(c, zero) == 0);\n\n", bits);
-
-	fprintf(f, "    assign%d(a, 1);\n", bits);
-	fprintf(f, "    mul%d_1(a, 1, c);\n", bits);
-	fprintf(f, "    assert(compare%d(c, one) == 0);\n\n", bits);
-
-	/* test mul */
-
-	fprintf(f, "    /* test mul */\n\n");
-	fprintf(f, "    printf(\"test mul\\n\");\n");
-
-	fprintf(f, "    assign%d(a, 2);\n", bits);
-	fprintf(f, "    copy%d(a, aa);\n", bits);
-	fprintf(f, "    assign%d(b, 3);\n", bits);
-	fprintf(f, "    copy%d(b, bb);\n", bits);
-	fprintf(f, "    mul%d(a, b, c);\n", bits);
-	fprintf(f, "    assign%d(cc, 6);\n", bits);
-	fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
-
-	fprintf(f, "    assign%d(a, 2);\n", bits);
-	fprintf(f, "    copy%d(a, aa);\n", bits);
-	fprintf(f, "    assign%d(b, -3);\n", bits);
-	fprintf(f, "    copy%d(b, bb);\n", bits);
-	fprintf(f, "    mul%d(a, b, c);\n", bits);
-	fprintf(f, "    assign%d(cc, -6);\n", bits);
-	fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
-
-	fprintf(f, "    assign%d(a, -2);\n", bits);
-	fprintf(f, "    copy%d(a, aa);\n", bits);
-	fprintf(f, "    assign%d(b, 3);\n", bits);
-	fprintf(f, "    copy%d(b, bb);\n", bits);
-	fprintf(f, "    mul%d(a, b, c);\n", bits);
-	fprintf(f, "    assign%d(cc, -6);\n", bits);
-	fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
-
-	fprintf(f, "    assign%d(a, -2);\n", bits);
-	fprintf(f, "    copy%d(a, aa);\n", bits);
-	fprintf(f, "    assign%d(b, -3);\n", bits);
-	fprintf(f, "    copy%d(b, bb);\n", bits);
-	fprintf(f, "    mul%d(a, b, c);\n", bits);
-	fprintf(f, "    assign%d(cc, 6);\n", bits);
-	fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
-
-	fprintf(f, "    copy%d(INT%d_MAX, a);\n", bits, bits);
-	fprintf(f, "    copy%d(a, aa);\n", bits);
-	fprintf(f, "    assign%d(b, -1);\n", bits);
-	fprintf(f, "    copy%d(b, bb);\n", bits);
-	fprintf(f, "    mul%d(a, b, c);\n", bits);
-	fprintf(f, "    sub%d(c, one, cc);\n", bits);
-	fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(cc, INT%d_MIN) == 0);\n\n", bits, bits);
-
-	/* test div_1 */
-
-	fprintf(f, "    /* test div%d_1 */\n\n", bits);
-	fprintf(f, "    printf(\"test div_1\\n\");\n");
-
-	fprintf(f, "    assign%d(a, 42);\n", bits);
-	fprintf(f, "    rem = div%d_1(a, 10, c);\n", bits);
-	fprintf(f, "    assign%d(cc, 4);\n", bits);
-	fprintf(f, "    assert(compare%d(c, cc) == 0);\n", bits);
-	fprintf(f, "    assert(rem == 2);\n\n");
-
-	fprintf(f, "    assign%d(a, 100);\n", bits);
-	fprintf(f, "    rem = div%d_1(a, 10, c);\n", bits);
-	fprintf(f, "    assign%d(cc, 10);\n", bits);
-	fprintf(f, "    assert(compare%d(c, cc) == 0);\n", bits);
-	fprintf(f, "    assert(rem == 0);\n\n");
-
-	fprintf(f, "    assign%d(a, 7);\n", bits);
-	fprintf(f, "    rem = div%d_1(a, 7, c);\n", bits);
-	fprintf(f, "    assert(compare%d(c, one) == 0);\n", bits);
-	fprintf(f, "    assert(rem == 0);\n\n");
-
-	/* test div */
-
-	fprintf(f, "    /* test div */\n\n");
-	fprintf(f, "    printf(\"test div\\n\");\n");
-
-	fprintf(f, "    assign%d(a, 10);\n", bits);
-	fprintf(f, "    copy%d(a, aa);\n", bits);
-	fprintf(f, "    assign%d(b, 6);\n", bits);
-	fprintf(f, "    copy%d(b, bb);\n", bits);
-	fprintf(f, "    assign%d(cc, 1);\n", bits);
-	fprintf(f, "    assign%d(rr, 4);\n", bits);
-	fprintf(f, "    div%d(a, b, c, r);\n", bits);
-	fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(c, cc) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(r, rr) == 0);\n\n", bits);
-
-	fprintf(f, "    assign%d(a, 10);\n", bits);
-	fprintf(f, "    copy%d(a, aa);\n", bits);
-	fprintf(f, "    assign%d(b, -6);\n", bits);
-	fprintf(f, "    copy%d(b, bb);\n", bits);
-	fprintf(f, "    assign%d(cc, -1);\n", bits);
-	fprintf(f, "    assign%d(rr, 4);\n", bits);
-	fprintf(f, "    div%d(a, b, c, r);\n", bits);
-	fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(c, cc) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(r, rr) == 0);\n\n", bits);
-
-	fprintf(f, "    assign%d(a, -10);\n", bits);
-	fprintf(f, "    copy%d(a, aa);\n", bits);
-	fprintf(f, "    assign%d(b, 6);\n", bits);
-	fprintf(f, "    copy%d(b, bb);\n", bits);
-	fprintf(f, "    assign%d(cc, -1);\n", bits);
-	fprintf(f, "    assign%d(rr, -4);\n", bits);
-	fprintf(f, "    div%d(a, b, c, r);\n", bits);
-	fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(c, cc) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(r, rr) == 0);\n\n", bits);
-
-	fprintf(f, "    assign%d(a, -10);\n", bits);
-	fprintf(f, "    copy%d(a, aa);\n", bits);
-	fprintf(f, "    assign%d(b, -6);\n", bits);
-	fprintf(f, "    copy%d(b, bb);\n", bits);
-	fprintf(f, "    assign%d(cc, 1);\n", bits);
-	fprintf(f, "    assign%d(rr, -4);\n", bits);
-	fprintf(f, "    div%d(a, b, c, r);\n", bits);
-	fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(c, cc) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(r, rr) == 0);\n\n", bits);
-
-	fprintf(f, "    copy%d(INT%d_MAX, a);\n", bits, bits);
-	fprintf(f, "    copy%d(INT%d_MAX, b);\n", bits, bits);
-	fprintf(f, "    div%d(a, b, c, r);\n", bits);
-	fprintf(f, "    assert(compare%d(c, one) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(r, zero) == 0);\n\n", bits);
-
-	fprintf(f, "    copy%d(INT%d_MAX, a);\n", bits, bits);
-	fprintf(f, "    assign%d(b, 2);\n", bits);
-	fprintf(f, "    div%d(a, b, c, r);\n", bits);
-	fprintf(f, "    shl%d(c, 1);\n", bits);
-	fprintf(f, "    add%d(c, one, cc);\n", bits);
-	fprintf(f, "    assert(compare%d(a, cc) == 0);\n", bits);
-	fprintf(f, "    assert(compare%d(r, one) == 0);\n\n", bits);
-
-	/* test shl */
-
-	fprintf(f, "    /* test shl */\n\n");
-
-	fprintf(f, "    assign%d(a, 1);\n", bits);
-	fprintf(f, "    shl%d(a, 1);\n", bits);
-	fprintf(f, "    assign%d(aa, 2);\n", bits);
-	fprintf(f, "    assert(compare%d(a, aa) == 0);\n\n", bits);
-
-	fprintf(f, "    assign%d(a, 1);\n", bits);
-	fprintf(f, "    shl%d(a, 0);\n", bits);
-	fprintf(f, "    assert(compare%d(a, one) == 0);\n\n", bits);
-
-	fprintf(f, "    assign%d(a, 3);\n", bits);
-	fprintf(f, "    shl%d(a, 4);\n", bits);
-	fprintf(f, "    assign%d(aa, 48);\n", bits);
-	fprintf(f, "    assert(compare%d(a, aa) == 0);\n\n", bits);
-
-	/* test shr */
-
-	fprintf(f, "    /* test shr */\n\n");
-	fprintf(f, "    printf(\"test shr\\n\");\n");
-
-	fprintf(f, "    assign%d(a, 8);\n", bits);
-	fprintf(f, "    shr%d(a, 1);\n", bits);
-	fprintf(f, "    assign%d(aa, 4);\n", bits);
-	fprintf(f, "    assert(compare%d(a, aa) == 0);\n\n", bits);
-
-	fprintf(f, "    assign%d(a, 8);\n", bits);
-	fprintf(f, "    shr%d(a, 0);\n", bits);
-	fprintf(f, "    assign%d(aa, 8);\n", bits);
-	fprintf(f, "    assert(compare%d(a, aa) == 0);\n\n", bits);
-
-	fprintf(f, "    assign%d(a, 255);\n", bits);
-	fprintf(f, "    shr%d(a, 4);\n", bits);
-	fprintf(f, "    assign%d(aa, 15);\n", bits);
-	fprintf(f, "    assert(compare%d(a, aa) == 0);\n\n", bits);
-
-	/* test sar */
-
-	fprintf(f, "    /* test sar */\n\n");
-	fprintf(f, "    printf(\"test sar\\n\");\n");
-
-	fprintf(f, "    assign%d(a, 8);\n", bits);
-	fprintf(f, "    sar%d(a, 1);\n", bits);
-	fprintf(f, "    assign%d(aa, 4);\n", bits);
-	fprintf(f, "    assert(compare%d(a, aa) == 0);\n\n", bits);
-
-	fprintf(f, "    assign%d(a, -8);\n", bits);
-	fprintf(f, "    sar%d(a, 1);\n", bits);
-	fprintf(f, "    assign%d(aa, -4);\n", bits);
-	fprintf(f, "    assert(compare%d(a, aa) == 0);\n\n", bits);
-
-	fprintf(f, "    assign%d(a, -1);\n", bits);
-	fprintf(f, "    sar%d(a, 1);\n", bits);
-	fprintf(f, "    assert(compare%d(a, minus_one) == 0);\n\n", bits);
-
-	/* test and */
-
-	fprintf(f, "    /* test and */\n\n");
-	fprintf(f, "    printf(\"test and\\n\");\n");
-
-	fprintf(f, "    assign%d(a, 0xFF);\n", bits);
-	fprintf(f, "    assign%d(b, 0x0F);\n", bits);
-	fprintf(f, "    and%d(a, b, c);\n", bits);
-	fprintf(f, "    assign%d(cc, 0x0F);\n", bits);
-	fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
-
-	fprintf(f, "    assign%d(a, 0);\n", bits);
-	fprintf(f, "    assign%d(b, -1);\n", bits);
-	fprintf(f, "    and%d(a, b, c);\n", bits);
-	fprintf(f, "    assert(compare%d(c, zero) == 0);\n\n", bits);
-
-	fprintf(f, "    assign%d(a, -1);\n", bits);
-	fprintf(f, "    assign%d(b, -1);\n", bits);
-	fprintf(f, "    and%d(a, b, c);\n", bits);
-	fprintf(f, "    assert(compare%d(c, minus_one) == 0);\n\n", bits);
-
-	/* test or */
-
-	fprintf(f, "    /* test or */\n\n");
-	fprintf(f, "    printf(\"test or\\n\");\n");
-
-	fprintf(f, "    assign%d(a, 0xF0);\n", bits);
-	fprintf(f, "    assign%d(b, 0x0F);\n", bits);
-	fprintf(f, "    or%d(a, b, c);\n", bits);
-	fprintf(f, "    assign%d(cc, 0xFF);\n", bits);
-	fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
-
-	fprintf(f, "    assign%d(a, 0);\n", bits);
-	fprintf(f, "    assign%d(b, 0);\n", bits);
-	fprintf(f, "    or%d(a, b, c);\n", bits);
-	fprintf(f, "    assert(compare%d(c, zero) == 0);\n\n", bits);
-
-	fprintf(f, "    assign%d(a, 0);\n", bits);
-	fprintf(f, "    assign%d(b, -1);\n", bits);
-	fprintf(f, "    or%d(a, b, c);\n", bits);
-	fprintf(f, "    assert(compare%d(c, minus_one) == 0);\n\n", bits);
-
-	/* test xor */
-
-	fprintf(f, "    /* test xor */\n\n");
-	fprintf(f, "    printf(\"test xor\\n\");\n");
-
-	fprintf(f, "    assign%d(a, 0xFF);\n", bits);
-	fprintf(f, "    assign%d(b, 0x0F);\n", bits);
-	fprintf(f, "    xor%d(a, b, c);\n", bits);
-	fprintf(f, "    assign%d(cc, 0xF0);\n", bits);
-	fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
-
-	fprintf(f, "    assign%d(a, -1);\n", bits);
-	fprintf(f, "    assign%d(b, -1);\n", bits);
-	fprintf(f, "    xor%d(a, b, c);\n", bits);
-	fprintf(f, "    assert(compare%d(c, zero) == 0);\n\n", bits);
-
-	fprintf(f, "    assign%d(a, 0);\n", bits);
-	fprintf(f, "    assign%d(b, -1);\n", bits);
-	fprintf(f, "    xor%d(a, b, c);\n", bits);
-	fprintf(f, "    assert(compare%d(c, minus_one) == 0);\n\n", bits);
-
-	/* test not */
-
-	fprintf(f, "    /* test not */\n\n");
-	fprintf(f, "    printf(\"test not\\n\");\n");
-
-	fprintf(f, "    assign%d(a, 0);\n", bits);
-	fprintf(f, "    not%d(a);\n", bits);
-	fprintf(f, "    assert(compare%d(a, minus_one) == 0);\n\n", bits);
-
-	fprintf(f, "    assign%d(a, -1);\n", bits);
-	fprintf(f, "    not%d(a);\n", bits);
-	fprintf(f, "    assert(compare%d(a, zero) == 0);\n\n", bits);
-
-	fprintf(f, "    assign%d(a, -1);\n", bits);
-	fprintf(f, "    not%d(a);\n", bits);
-	fprintf(f, "    not%d(a);\n", bits);
-	fprintf(f, "    assert(compare%d(a, minus_one) == 0);\n\n", bits);
-
-	/* test to_decimal_string */
-
-	fprintf(f, "    /* test to_decimal_string */\n\n");
-	fprintf(f, "    printf(\"test to_decimal_string\\n\");\n");
-
-	fprintf(f, "    assign%d(a, 0);\n", bits);
-	fprintf(f, "    s = to_decimal_string%d(a, buf, sizeof(buf));\n", bits);
-	fprintf(f, "    assert(strcmp(s, \"0\") == 0);\n\n");
-
-	fprintf(f, "    assign%d(a, 1);\n", bits);
-	fprintf(f, "    s = to_decimal_string%d(a, buf, sizeof(buf));\n", bits);
-	fprintf(f, "    assert(strcmp(s, \"1\") == 0);\n\n");
-
-	fprintf(f, "    assign%d(a, -1);\n", bits);
-	fprintf(f, "    s = to_decimal_string%d(a, buf, sizeof(buf));\n", bits);
-	fprintf(f, "    assert(strcmp(s, \"-1\") == 0);\n\n");
-
-	fprintf(f, "    assign%d(a, 123456789);\n", bits);
-	fprintf(f, "    s = to_decimal_string%d(a, buf, sizeof(buf));\n", bits);
-	fprintf(f, "    assert(strcmp(s, \"123456789\") == 0);\n\n");
-
-	fprintf(f, "    assign%d(a, -123456789);\n", bits);
-	fprintf(f, "    s = to_decimal_string%d(a, buf, sizeof(buf));\n", bits);
-	fprintf(f, "    assert(strcmp(s, \"-123456789\") == 0);\n\n");
-
-	/* test parse */
-
-	fprintf(f, "    /* test parse */\n\n");
-	fprintf(f, "    printf(\"test parse\\n\");\n");
-
-	fprintf(f, "    parse%d(\"0\", a);\n", bits);
-	fprintf(f, "    assert(compare%d(a, zero) == 0);\n\n", bits);
-
-	fprintf(f, "    parse%d(\"1\", a);\n", bits);
-	fprintf(f, "    assert(compare%d(a, one) == 0);\n\n", bits);
-
-	fprintf(f, "    parse%d(\"-1\", a);\n", bits);
-	fprintf(f, "    assert(compare%d(a, minus_one) == 0);\n\n", bits);
-
-	fprintf(f, "    parse%d(\"123\", a);\n", bits);
-	fprintf(f, "    assign%d(aa, 123);\n", bits);
-	fprintf(f, "    assert(compare%d(a, aa) == 0);\n\n", bits);
-
-	fprintf(f, "    parse%d(\"-123\", a);\n", bits);
-	fprintf(f, "    assign%d(aa, -123);\n", bits);
-	fprintf(f, "    assert(compare%d(a, aa) == 0);\n\n", bits);
-
-	fprintf(f, "    parse%d(\"999999999999999999\", a);\n", bits);
-	fprintf(f, "    s = to_decimal_string%d(a, buf, sizeof(buf));\n", bits);
-	fprintf(f, "    assert(strcmp(s, \"999999999999999999\") == 0);\n\n");
-
-	fprintf(f, "    printf(\"All tests passed.\\n\");\n\n");
-
-	fprintf(f, "    return 0;\n");
-	fprintf(f, "}\n");
-
-	fclose(f);
+    fprintf(f, "    assign%d(a, 1);\n", bits);
+    fprintf(f, "    assign%d(b, 2);\n", bits);
+    fprintf(f, "    assert(compare%d(a, b) < 0);\n", bits);
+    fprintf(f, "    assert(compare%d(b, a) > 0);\n", bits);
+    fprintf(f, "    assert(compare%d(a, a) == 0);\n\n", bits);
+
+    fprintf(f, "    assign%d(a, -1);\n", bits);
+    fprintf(f, "    assign%d(b, 1);\n", bits);
+    fprintf(f, "    assert(compare%d(a, b) < 0);\n", bits);
+    fprintf(f, "    assert(compare%d(b, a) > 0);\n\n", bits);
+
+    fprintf(f, "    assign%d(a, -2);\n", bits);
+    fprintf(f, "    assign%d(b, -1);\n", bits);
+    fprintf(f, "    assert(compare%d(a, b) < 0);\n", bits);
+    fprintf(f, "    assert(compare%d(b, a) > 0);\n\n", bits);
+
+    fprintf(f, "    copy%d(INT%d_MIN, a);\n", bits, bits);
+    fprintf(f, "    copy%d(INT%d_MAX, b);\n", bits, bits);
+    fprintf(f, "    assert(compare%d(a, b) < 0);\n", bits);
+    fprintf(f, "    assert(compare%d(b, a) > 0);\n\n", bits);
+
+    /* test is_negative */
+
+    fprintf(f, "    /* test is_negative */\n\n");
+    fprintf(f, "    printf(\"test is_negative\\n\");\n");
+
+    fprintf(f, "    assign%d(a, 0);\n", bits);
+    fprintf(f, "    assert(is_negative%d(a) == 0);\n\n", bits);
+
+    fprintf(f, "    assign%d(a, 1);\n", bits);
+    fprintf(f, "    assert(is_negative%d(a) == 0);\n\n", bits);
+
+    fprintf(f, "    assign%d(a, -1);\n", bits);
+    fprintf(f, "    assert(is_negative%d(a) == 1);\n\n", bits);
+
+    fprintf(f, "    copy%d(INT%d_MIN, a);\n", bits, bits);
+    fprintf(f, "    assert(is_negative%d(a) == 1);\n\n", bits);
+
+    fprintf(f, "    copy%d(INT%d_MAX, a);\n", bits, bits);
+    fprintf(f, "    assert(is_negative%d(a) == 0);\n\n", bits);
+
+    /* test neg */
+
+    fprintf(f, "    /* test neg */\n\n");
+    fprintf(f, "    printf(\"test neg\\n\");\n");
+
+    fprintf(f, "    assign%d(a, 1);\n", bits);
+    fprintf(f, "    neg%d(a);\n", bits);
+    fprintf(f, "    assert(compare%d(a, minus_one) == 0);\n\n", bits);
+
+    fprintf(f, "    assign%d(a, -1);\n", bits);
+    fprintf(f, "    neg%d(a);\n", bits);
+    fprintf(f, "    assert(compare%d(a, one) == 0);\n\n", bits);
+
+    fprintf(f, "    assign%d(a, 0);\n", bits);
+    fprintf(f, "    neg%d(a);\n", bits);
+    fprintf(f, "    assert(compare%d(a, zero) == 0);\n\n", bits);
+
+    fprintf(f, "    copy%d(INT%d_MIN, a);\n", bits, bits);
+    fprintf(f, "    neg%d(a);\n", bits);
+    fprintf(f, "    assert(compare%d(a, INT%d_MIN) == 0);\n\n", bits, bits);
+
+    /* test add */
+
+    fprintf(f, "    /* test add */\n\n");
+    fprintf(f, "    printf(\"test add\\n\");\n");
+
+    fprintf(f, "    assign%d(a, 1);\n", bits);
+    fprintf(f, "    copy%d(a, aa);\n", bits);
+    fprintf(f, "    assign%d(b, 2);\n", bits);
+    fprintf(f, "    copy%d(b, bb);\n", bits);
+    fprintf(f, "    add%d(a, b, c);\n", bits);
+    fprintf(f, "    assign%d(cc, 3);\n", bits);
+    fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
+
+    fprintf(f, "    assign%d(a, 1);\n", bits);
+    fprintf(f, "    copy%d(a, aa);\n", bits);
+    fprintf(f, "    assign%d(b, -2);\n", bits);
+    fprintf(f, "    copy%d(b, bb);\n", bits);
+    fprintf(f, "    add%d(a, b, c);\n", bits);
+    fprintf(f, "    assign%d(cc, -1);\n", bits);
+    fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
+
+    fprintf(f, "    assign%d(a, -2);\n", bits);
+    fprintf(f, "    copy%d(a, aa);\n", bits);
+    fprintf(f, "    assign%d(b, 1);\n", bits);
+    fprintf(f, "    copy%d(b, bb);\n", bits);
+    fprintf(f, "    add%d(a, b, c);\n", bits);
+    fprintf(f, "    assign%d(cc, -1);\n", bits);
+    fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
+
+    fprintf(f, "    copy%d(INT%d_MAX, a);\n", bits, bits);
+    fprintf(f, "    copy%d(a, aa);\n", bits);
+    fprintf(f, "    assign%d(b, 1);\n", bits);
+    fprintf(f, "    copy%d(b, bb);\n", bits);
+    fprintf(f, "    add%d(a, b, c);\n", bits);
+    fprintf(f, "    copy%d(INT%d_MIN, cc);\n", bits, bits);
+    fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
+
+    fprintf(f, "    copy%d(INT%d_MIN, a);\n", bits, bits);
+    fprintf(f, "    copy%d(a, aa);\n", bits);
+    fprintf(f, "    assign%d(b, -1);\n", bits);
+    fprintf(f, "    copy%d(b, bb);\n", bits);
+    fprintf(f, "    add%d(a, b, c);\n", bits);
+    fprintf(f, "    copy%d(INT%d_MAX, cc);\n", bits, bits);
+    fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
+
+    fprintf(f, "    copy%d(INT%d_MIN, a);\n", bits, bits);
+    fprintf(f, "    copy%d(a, aa);\n", bits);
+    fprintf(f, "    copy%d(INT%d_MIN, b);\n", bits, bits);
+    fprintf(f, "    copy%d(b, bb);\n", bits);
+    fprintf(f, "    add%d(a, b, c);\n", bits);
+    fprintf(f, "    assign%d(cc, 0);\n", bits);
+    fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
+
+    fprintf(f, "    copy%d(INT%d_MAX, a);\n", bits, bits);
+    fprintf(f, "    copy%d(a, aa);\n", bits);
+    fprintf(f, "    copy%d(INT%d_MAX, b);\n", bits, bits);
+    fprintf(f, "    copy%d(b, bb);\n", bits);
+    fprintf(f, "    add%d(a, b, c);\n", bits);
+    fprintf(f, "    assign%d(cc, -2);\n", bits);
+    fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
+
+    /* test sub */
+
+    fprintf(f, "    /* test sub */\n\n");
+    fprintf(f, "    printf(\"test sub\\n\");\n");
+
+    fprintf(f, "    assign%d(a, 1);\n", bits);
+    fprintf(f, "    copy%d(a, aa);\n", bits);
+    fprintf(f, "    assign%d(b, 2);\n", bits);
+    fprintf(f, "    copy%d(b, bb);\n", bits);
+    fprintf(f, "    sub%d(a, b, c);\n", bits);
+    fprintf(f, "    assign%d(cc, -1);\n", bits);
+    fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
+
+    fprintf(f, "    copy%d(INT%d_MIN, a);\n", bits, bits);
+    fprintf(f, "    copy%d(a, aa);\n", bits);
+    fprintf(f, "    assign%d(b, 1);\n", bits);
+    fprintf(f, "    copy%d(b, bb);\n", bits);
+    fprintf(f, "    sub%d(a, b, c);\n", bits);
+    fprintf(f, "    copy%d(INT%d_MAX, cc);\n", bits, bits);
+    fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
+
+    fprintf(f, "    copy%d(INT%d_MAX, a);\n", bits, bits);
+    fprintf(f, "    copy%d(a, aa);\n", bits);
+    fprintf(f, "    assign%d(b, -1);\n", bits);
+    fprintf(f, "    copy%d(b, bb);\n", bits);
+    fprintf(f, "    sub%d(a, b, c);\n", bits);
+    fprintf(f, "    copy%d(INT%d_MIN, cc);\n", bits, bits);
+    fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
+
+    fprintf(f, "    copy%d(INT%d_MIN, a);\n", bits, bits);
+    fprintf(f, "    copy%d(a, aa);\n", bits);
+    fprintf(f, "    copy%d(INT%d_MIN, b);\n", bits, bits);
+    fprintf(f, "    copy%d(b, bb);\n", bits);
+    fprintf(f, "    sub%d(a, b, c);\n", bits);
+    fprintf(f, "    assign%d(cc, 0);\n", bits);
+    fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
+
+    fprintf(f, "    copy%d(INT%d_MAX, a);\n", bits, bits);
+    fprintf(f, "    copy%d(a, aa);\n", bits);
+    fprintf(f, "    copy%d(INT%d_MAX, b);\n", bits, bits);
+    fprintf(f, "    copy%d(b, bb);\n", bits);
+    fprintf(f, "    sub%d(a, b, c);\n", bits);
+    fprintf(f, "    assign%d(cc, 0);\n", bits);
+    fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
+
+    /* test mul_1 */
+
+    fprintf(f, "    /* test mul%d_1 */\n\n", bits);
+    fprintf(f, "    printf(\"test mul_1\\n\");\n");
+
+    fprintf(f, "    assign%d(a, 7);\n", bits);
+    fprintf(f, "    mul%d_1(a, 6, c);\n", bits);
+    fprintf(f, "    assign%d(cc, 42);\n", bits);
+    fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
+
+    fprintf(f, "    assign%d(a, 0);\n", bits);
+    fprintf(f, "    mul%d_1(a, 999, c);\n", bits);
+    fprintf(f, "    assert(compare%d(c, zero) == 0);\n\n", bits);
+
+    fprintf(f, "    assign%d(a, 1);\n", bits);
+    fprintf(f, "    mul%d_1(a, 1, c);\n", bits);
+    fprintf(f, "    assert(compare%d(c, one) == 0);\n\n", bits);
+
+    /* test mul */
+
+    fprintf(f, "    /* test mul */\n\n");
+    fprintf(f, "    printf(\"test mul\\n\");\n");
+
+    fprintf(f, "    assign%d(a, 2);\n", bits);
+    fprintf(f, "    copy%d(a, aa);\n", bits);
+    fprintf(f, "    assign%d(b, 3);\n", bits);
+    fprintf(f, "    copy%d(b, bb);\n", bits);
+    fprintf(f, "    mul%d(a, b, c);\n", bits);
+    fprintf(f, "    assign%d(cc, 6);\n", bits);
+    fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
+
+    fprintf(f, "    assign%d(a, 2);\n", bits);
+    fprintf(f, "    copy%d(a, aa);\n", bits);
+    fprintf(f, "    assign%d(b, -3);\n", bits);
+    fprintf(f, "    copy%d(b, bb);\n", bits);
+    fprintf(f, "    mul%d(a, b, c);\n", bits);
+    fprintf(f, "    assign%d(cc, -6);\n", bits);
+    fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
+
+    fprintf(f, "    assign%d(a, -2);\n", bits);
+    fprintf(f, "    copy%d(a, aa);\n", bits);
+    fprintf(f, "    assign%d(b, 3);\n", bits);
+    fprintf(f, "    copy%d(b, bb);\n", bits);
+    fprintf(f, "    mul%d(a, b, c);\n", bits);
+    fprintf(f, "    assign%d(cc, -6);\n", bits);
+    fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
+
+    fprintf(f, "    assign%d(a, -2);\n", bits);
+    fprintf(f, "    copy%d(a, aa);\n", bits);
+    fprintf(f, "    assign%d(b, -3);\n", bits);
+    fprintf(f, "    copy%d(b, bb);\n", bits);
+    fprintf(f, "    mul%d(a, b, c);\n", bits);
+    fprintf(f, "    assign%d(cc, 6);\n", bits);
+    fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
+
+    fprintf(f, "    copy%d(INT%d_MAX, a);\n", bits, bits);
+    fprintf(f, "    copy%d(a, aa);\n", bits);
+    fprintf(f, "    assign%d(b, -1);\n", bits);
+    fprintf(f, "    copy%d(b, bb);\n", bits);
+    fprintf(f, "    mul%d(a, b, c);\n", bits);
+    fprintf(f, "    sub%d(c, one, cc);\n", bits);
+    fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(cc, INT%d_MIN) == 0);\n\n", bits, bits);
+
+    /* test div_1 */
+
+    fprintf(f, "    /* test div%d_1 */\n\n", bits);
+    fprintf(f, "    printf(\"test div_1\\n\");\n");
+
+    fprintf(f, "    assign%d(a, 42);\n", bits);
+    fprintf(f, "    rem = div%d_1(a, 10, c);\n", bits);
+    fprintf(f, "    assign%d(cc, 4);\n", bits);
+    fprintf(f, "    assert(compare%d(c, cc) == 0);\n", bits);
+    fprintf(f, "    assert(rem == 2);\n\n");
+
+    fprintf(f, "    assign%d(a, 100);\n", bits);
+    fprintf(f, "    rem = div%d_1(a, 10, c);\n", bits);
+    fprintf(f, "    assign%d(cc, 10);\n", bits);
+    fprintf(f, "    assert(compare%d(c, cc) == 0);\n", bits);
+    fprintf(f, "    assert(rem == 0);\n\n");
+
+    fprintf(f, "    assign%d(a, 7);\n", bits);
+    fprintf(f, "    rem = div%d_1(a, 7, c);\n", bits);
+    fprintf(f, "    assert(compare%d(c, one) == 0);\n", bits);
+    fprintf(f, "    assert(rem == 0);\n\n");
+
+    /* test div */
+
+    fprintf(f, "    /* test div */\n\n");
+    fprintf(f, "    printf(\"test div\\n\");\n");
+
+    fprintf(f, "    assign%d(a, 10);\n", bits);
+    fprintf(f, "    copy%d(a, aa);\n", bits);
+    fprintf(f, "    assign%d(b, 6);\n", bits);
+    fprintf(f, "    copy%d(b, bb);\n", bits);
+    fprintf(f, "    assign%d(cc, 1);\n", bits);
+    fprintf(f, "    assign%d(rr, 4);\n", bits);
+    fprintf(f, "    div%d(a, b, c, r);\n", bits);
+    fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(c, cc) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(r, rr) == 0);\n\n", bits);
+
+    fprintf(f, "    assign%d(a, 10);\n", bits);
+    fprintf(f, "    copy%d(a, aa);\n", bits);
+    fprintf(f, "    assign%d(b, -6);\n", bits);
+    fprintf(f, "    copy%d(b, bb);\n", bits);
+    fprintf(f, "    assign%d(cc, -1);\n", bits);
+    fprintf(f, "    assign%d(rr, 4);\n", bits);
+    fprintf(f, "    div%d(a, b, c, r);\n", bits);
+    fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(c, cc) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(r, rr) == 0);\n\n", bits);
+
+    fprintf(f, "    assign%d(a, -10);\n", bits);
+    fprintf(f, "    copy%d(a, aa);\n", bits);
+    fprintf(f, "    assign%d(b, 6);\n", bits);
+    fprintf(f, "    copy%d(b, bb);\n", bits);
+    fprintf(f, "    assign%d(cc, -1);\n", bits);
+    fprintf(f, "    assign%d(rr, -4);\n", bits);
+    fprintf(f, "    div%d(a, b, c, r);\n", bits);
+    fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(c, cc) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(r, rr) == 0);\n\n", bits);
+
+    fprintf(f, "    assign%d(a, -10);\n", bits);
+    fprintf(f, "    copy%d(a, aa);\n", bits);
+    fprintf(f, "    assign%d(b, -6);\n", bits);
+    fprintf(f, "    copy%d(b, bb);\n", bits);
+    fprintf(f, "    assign%d(cc, 1);\n", bits);
+    fprintf(f, "    assign%d(rr, -4);\n", bits);
+    fprintf(f, "    div%d(a, b, c, r);\n", bits);
+    fprintf(f, "    assert(compare%d(a, aa) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(b, bb) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(c, cc) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(r, rr) == 0);\n\n", bits);
+
+    fprintf(f, "    copy%d(INT%d_MAX, a);\n", bits, bits);
+    fprintf(f, "    copy%d(INT%d_MAX, b);\n", bits, bits);
+    fprintf(f, "    div%d(a, b, c, r);\n", bits);
+    fprintf(f, "    assert(compare%d(c, one) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(r, zero) == 0);\n\n", bits);
+
+    fprintf(f, "    copy%d(INT%d_MAX, a);\n", bits, bits);
+    fprintf(f, "    assign%d(b, 2);\n", bits);
+    fprintf(f, "    div%d(a, b, c, r);\n", bits);
+    fprintf(f, "    shl%d(c, 1);\n", bits);
+    fprintf(f, "    add%d(c, one, cc);\n", bits);
+    fprintf(f, "    assert(compare%d(a, cc) == 0);\n", bits);
+    fprintf(f, "    assert(compare%d(r, one) == 0);\n\n", bits);
+
+    /* test shl */
+
+    fprintf(f, "    /* test shl */\n\n");
+
+    fprintf(f, "    assign%d(a, 1);\n", bits);
+    fprintf(f, "    shl%d(a, 1);\n", bits);
+    fprintf(f, "    assign%d(aa, 2);\n", bits);
+    fprintf(f, "    assert(compare%d(a, aa) == 0);\n\n", bits);
+
+    fprintf(f, "    assign%d(a, 1);\n", bits);
+    fprintf(f, "    shl%d(a, 0);\n", bits);
+    fprintf(f, "    assert(compare%d(a, one) == 0);\n\n", bits);
+
+    fprintf(f, "    assign%d(a, 3);\n", bits);
+    fprintf(f, "    shl%d(a, 4);\n", bits);
+    fprintf(f, "    assign%d(aa, 48);\n", bits);
+    fprintf(f, "    assert(compare%d(a, aa) == 0);\n\n", bits);
+
+    /* test shr */
+
+    fprintf(f, "    /* test shr */\n\n");
+    fprintf(f, "    printf(\"test shr\\n\");\n");
+
+    fprintf(f, "    assign%d(a, 8);\n", bits);
+    fprintf(f, "    shr%d(a, 1);\n", bits);
+    fprintf(f, "    assign%d(aa, 4);\n", bits);
+    fprintf(f, "    assert(compare%d(a, aa) == 0);\n\n", bits);
+
+    fprintf(f, "    assign%d(a, 8);\n", bits);
+    fprintf(f, "    shr%d(a, 0);\n", bits);
+    fprintf(f, "    assign%d(aa, 8);\n", bits);
+    fprintf(f, "    assert(compare%d(a, aa) == 0);\n\n", bits);
+
+    fprintf(f, "    assign%d(a, 255);\n", bits);
+    fprintf(f, "    shr%d(a, 4);\n", bits);
+    fprintf(f, "    assign%d(aa, 15);\n", bits);
+    fprintf(f, "    assert(compare%d(a, aa) == 0);\n\n", bits);
+
+    /* test sar */
+
+    fprintf(f, "    /* test sar */\n\n");
+    fprintf(f, "    printf(\"test sar\\n\");\n");
+
+    fprintf(f, "    assign%d(a, 8);\n", bits);
+    fprintf(f, "    sar%d(a, 1);\n", bits);
+    fprintf(f, "    assign%d(aa, 4);\n", bits);
+    fprintf(f, "    assert(compare%d(a, aa) == 0);\n\n", bits);
+
+    fprintf(f, "    assign%d(a, -8);\n", bits);
+    fprintf(f, "    sar%d(a, 1);\n", bits);
+    fprintf(f, "    assign%d(aa, -4);\n", bits);
+    fprintf(f, "    assert(compare%d(a, aa) == 0);\n\n", bits);
+
+    fprintf(f, "    assign%d(a, -1);\n", bits);
+    fprintf(f, "    sar%d(a, 1);\n", bits);
+    fprintf(f, "    assert(compare%d(a, minus_one) == 0);\n\n", bits);
+
+    /* test and */
+
+    fprintf(f, "    /* test and */\n\n");
+    fprintf(f, "    printf(\"test and\\n\");\n");
+
+    fprintf(f, "    assign%d(a, 0xFF);\n", bits);
+    fprintf(f, "    assign%d(b, 0x0F);\n", bits);
+    fprintf(f, "    and%d(a, b, c);\n", bits);
+    fprintf(f, "    assign%d(cc, 0x0F);\n", bits);
+    fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
+
+    fprintf(f, "    assign%d(a, 0);\n", bits);
+    fprintf(f, "    assign%d(b, -1);\n", bits);
+    fprintf(f, "    and%d(a, b, c);\n", bits);
+    fprintf(f, "    assert(compare%d(c, zero) == 0);\n\n", bits);
+
+    fprintf(f, "    assign%d(a, -1);\n", bits);
+    fprintf(f, "    assign%d(b, -1);\n", bits);
+    fprintf(f, "    and%d(a, b, c);\n", bits);
+    fprintf(f, "    assert(compare%d(c, minus_one) == 0);\n\n", bits);
+
+    /* test or */
+
+    fprintf(f, "    /* test or */\n\n");
+    fprintf(f, "    printf(\"test or\\n\");\n");
+
+    fprintf(f, "    assign%d(a, 0xF0);\n", bits);
+    fprintf(f, "    assign%d(b, 0x0F);\n", bits);
+    fprintf(f, "    or%d(a, b, c);\n", bits);
+    fprintf(f, "    assign%d(cc, 0xFF);\n", bits);
+    fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
+
+    fprintf(f, "    assign%d(a, 0);\n", bits);
+    fprintf(f, "    assign%d(b, 0);\n", bits);
+    fprintf(f, "    or%d(a, b, c);\n", bits);
+    fprintf(f, "    assert(compare%d(c, zero) == 0);\n\n", bits);
+
+    fprintf(f, "    assign%d(a, 0);\n", bits);
+    fprintf(f, "    assign%d(b, -1);\n", bits);
+    fprintf(f, "    or%d(a, b, c);\n", bits);
+    fprintf(f, "    assert(compare%d(c, minus_one) == 0);\n\n", bits);
+
+    /* test xor */
+
+    fprintf(f, "    /* test xor */\n\n");
+    fprintf(f, "    printf(\"test xor\\n\");\n");
+
+    fprintf(f, "    assign%d(a, 0xFF);\n", bits);
+    fprintf(f, "    assign%d(b, 0x0F);\n", bits);
+    fprintf(f, "    xor%d(a, b, c);\n", bits);
+    fprintf(f, "    assign%d(cc, 0xF0);\n", bits);
+    fprintf(f, "    assert(compare%d(c, cc) == 0);\n\n", bits);
+
+    fprintf(f, "    assign%d(a, -1);\n", bits);
+    fprintf(f, "    assign%d(b, -1);\n", bits);
+    fprintf(f, "    xor%d(a, b, c);\n", bits);
+    fprintf(f, "    assert(compare%d(c, zero) == 0);\n\n", bits);
+
+    fprintf(f, "    assign%d(a, 0);\n", bits);
+    fprintf(f, "    assign%d(b, -1);\n", bits);
+    fprintf(f, "    xor%d(a, b, c);\n", bits);
+    fprintf(f, "    assert(compare%d(c, minus_one) == 0);\n\n", bits);
+
+    /* test not */
+
+    fprintf(f, "    /* test not */\n\n");
+    fprintf(f, "    printf(\"test not\\n\");\n");
+
+    fprintf(f, "    assign%d(a, 0);\n", bits);
+    fprintf(f, "    not%d(a);\n", bits);
+    fprintf(f, "    assert(compare%d(a, minus_one) == 0);\n\n", bits);
+
+    fprintf(f, "    assign%d(a, -1);\n", bits);
+    fprintf(f, "    not%d(a);\n", bits);
+    fprintf(f, "    assert(compare%d(a, zero) == 0);\n\n", bits);
+
+    fprintf(f, "    assign%d(a, -1);\n", bits);
+    fprintf(f, "    not%d(a);\n", bits);
+    fprintf(f, "    not%d(a);\n", bits);
+    fprintf(f, "    assert(compare%d(a, minus_one) == 0);\n\n", bits);
+
+    /* test to_decimal_string */
+
+    fprintf(f, "    /* test to_decimal_string */\n\n");
+    fprintf(f, "    printf(\"test to_decimal_string\\n\");\n");
+
+    fprintf(f, "    assign%d(a, 0);\n", bits);
+    fprintf(f, "    s = to_decimal_string%d(a, buf, sizeof(buf));\n", bits);
+    fprintf(f, "    assert(strcmp(s, \"0\") == 0);\n\n");
+
+    fprintf(f, "    assign%d(a, 1);\n", bits);
+    fprintf(f, "    s = to_decimal_string%d(a, buf, sizeof(buf));\n", bits);
+    fprintf(f, "    assert(strcmp(s, \"1\") == 0);\n\n");
+
+    fprintf(f, "    assign%d(a, -1);\n", bits);
+    fprintf(f, "    s = to_decimal_string%d(a, buf, sizeof(buf));\n", bits);
+    fprintf(f, "    assert(strcmp(s, \"-1\") == 0);\n\n");
+
+    fprintf(f, "    assign%d(a, 123456789);\n", bits);
+    fprintf(f, "    s = to_decimal_string%d(a, buf, sizeof(buf));\n", bits);
+    fprintf(f, "    assert(strcmp(s, \"123456789\") == 0);\n\n");
+
+    fprintf(f, "    assign%d(a, -123456789);\n", bits);
+    fprintf(f, "    s = to_decimal_string%d(a, buf, sizeof(buf));\n", bits);
+    fprintf(f, "    assert(strcmp(s, \"-123456789\") == 0);\n\n");
+
+    /* test parse */
+
+    fprintf(f, "    /* test parse */\n\n");
+    fprintf(f, "    printf(\"test parse\\n\");\n");
+
+    fprintf(f, "    parse%d(\"0\", a);\n", bits);
+    fprintf(f, "    assert(compare%d(a, zero) == 0);\n\n", bits);
+
+    fprintf(f, "    parse%d(\"1\", a);\n", bits);
+    fprintf(f, "    assert(compare%d(a, one) == 0);\n\n", bits);
+
+    fprintf(f, "    parse%d(\"-1\", a);\n", bits);
+    fprintf(f, "    assert(compare%d(a, minus_one) == 0);\n\n", bits);
+
+    fprintf(f, "    parse%d(\"123\", a);\n", bits);
+    fprintf(f, "    assign%d(aa, 123);\n", bits);
+    fprintf(f, "    assert(compare%d(a, aa) == 0);\n\n", bits);
+
+    fprintf(f, "    parse%d(\"-123\", a);\n", bits);
+    fprintf(f, "    assign%d(aa, -123);\n", bits);
+    fprintf(f, "    assert(compare%d(a, aa) == 0);\n\n", bits);
+
+    fprintf(f, "    parse%d(\"999999999999999999\", a);\n", bits);
+    fprintf(f, "    s = to_decimal_string%d(a, buf, sizeof(buf));\n", bits);
+    fprintf(f, "    assert(strcmp(s, \"999999999999999999\") == 0);\n\n");
+
+    fprintf(f, "    printf(\"All tests passed.\\n\");\n\n");
+
+    fprintf(f, "    return 0;\n");
+    fprintf(f, "}\n");
+
+    fclose(f);
 }
 
 void generate_test_cpp()
 {
-	char s[128];
-	FILE* f = NULL;
-
-	sprintf(s, "test_cint%d.cpp", bits);
-
-	printf("generating %s\n", s);
-
-	f = fopen(s, "w");
-	if (f == NULL)
-		error("Cannot open file", s);
-
-	fprintf(f, "#include <cstdio>\n");
-	fprintf(f, "#include <cassert>\n");
-	fprintf(f, "#include <sstream>\n");
-	fprintf(f, "#include \"cint%d.h\"\n\n", bits);
-
-	fprintf(f, "int main()\n");
-	fprintf(f, "{\n");
-	fprintf(f, "    int%d a, b, c, r;\n\n", bits);
-
-	/* test relational operators */
-
-	fprintf(f, "    // test relational operators\n\n");
-	fprintf(f, "    std::cout << \"test relational operators\" << std::endl;\n");
-	fprintf(f, "    assert(int%d(1) < int%d(2));\n", bits, bits);
-	fprintf(f, "    assert(int%d(2) > int%d(1));\n", bits, bits);
-	fprintf(f, "    assert(int%d(1) <= int%d(1));\n", bits, bits);
-	fprintf(f, "    assert(int%d(1) >= int%d(1));\n", bits, bits);
-	fprintf(f, "    assert(int%d(1) != int%d(2));\n", bits, bits);
-	fprintf(f, "    assert(int%d(-1) < int%d(1));\n", bits, bits);
-	fprintf(f, "    assert(int%d(-2) < int%d(-1));\n", bits, bits);
-	fprintf(f, "    assert(int%d::min < int%d::max);\n\n", bits, bits);
-
-	/* test bool conversion */
-
-	fprintf(f, "    // test bool conversion\n\n");
-	fprintf(f, "    std::cout << \"test bool conversion\" << std::endl;\n");
-	fprintf(f, "    assert(!(bool)int%d(0ll));\n", bits);
-	fprintf(f, "    assert((bool)int%d(1));\n", bits);
-	fprintf(f, "    assert((bool)int%d(-1));\n", bits);
-	fprintf(f, "    assert((bool)int%d::min);\n\n", bits);
-
-	/* test is_negative */
-
-	fprintf(f, "    // test is_negative\n\n");
-	fprintf(f, "    std::cout << \"test is_negative\" << std::endl;\n");
-	fprintf(f, "    assert(!int%d(0ll).is_negative());\n", bits);
-	fprintf(f, "    assert(!int%d(1).is_negative());\n", bits);
-	fprintf(f, "    assert(int%d(-1).is_negative());\n", bits);
-	fprintf(f, "    assert(int%d::min.is_negative());\n", bits);
-	fprintf(f, "    assert(!int%d::max.is_negative());\n\n", bits);
-
-	/* test unary minus */
-
-	fprintf(f, "    // test unary minus\n\n");
-	fprintf(f, "    std::cout << \"test unary minus\" << std::endl;\n");
-	fprintf(f, "    assert(-int%d(1) == int%d(-1));\n", bits, bits);
-	fprintf(f, "    assert(-int%d(-1) == int%d(1));\n", bits, bits);
-	fprintf(f, "    assert(-int%d(0ll) == int%d(0ll));\n", bits, bits);
-	fprintf(f, "    assert(-int%d::min == int%d::min);\n\n", bits, bits);
-
-	/* test add */
-
-	fprintf(f, "    // test add\n\n");
-	fprintf(f, "    std::cout << \"test add\" << std::endl;\n");
-
-	fprintf(f, "    a = 1;\n");
-	fprintf(f, "    b = 2;\n");
-	fprintf(f, "    c = a + b;\n");
-	fprintf(f, "    assert(a == int%d(1));\n", bits);
-	fprintf(f, "    assert(b == int%d(2));\n", bits);
-	fprintf(f, "    assert(c == int%d(3));\n\n", bits);
-
-	fprintf(f, "    a = 1;\n");
-	fprintf(f, "    b = -2;\n");
-	fprintf(f, "    c = a + b;\n");
-	fprintf(f, "    assert(a == int%d(1));\n", bits);
-	fprintf(f, "    assert(b == int%d(-2));\n", bits);
-	fprintf(f, "    assert(c == int%d(-1));\n\n", bits);
-
-	fprintf(f, "    a = -2;\n");
-	fprintf(f, "    b = 1;\n");
-	fprintf(f, "    c = a + b;\n");
-	fprintf(f, "    assert(a == int%d(-2));\n", bits);
-	fprintf(f, "    assert(b == int%d(1));\n", bits);
-	fprintf(f, "    assert(c == int%d(-1));\n\n", bits);
-
-	fprintf(f, "    a = int%d::max;\n", bits);
-	fprintf(f, "    b = 1;\n");
-	fprintf(f, "    c = a + b;\n");
-	fprintf(f, "    assert(a == int%d::max);\n", bits);
-	fprintf(f, "    assert(b == int%d(1));\n", bits);
-	fprintf(f, "    assert(c == int%d::min);\n\n", bits);
-
-	fprintf(f, "    a = int%d::min;\n", bits);
-	fprintf(f, "    b = -1;\n");
-	fprintf(f, "    c = a + b;\n");
-	fprintf(f, "    assert(a == int%d::min);\n", bits);
-	fprintf(f, "    assert(b == int%d(-1));\n", bits);
-	fprintf(f, "    assert(c == int%d::max);\n\n", bits);
-
-	/* test sub */
-
-	fprintf(f, "    // test sub\n\n");
-	fprintf(f, "    std::cout << \"test sub\" << std::endl;\n");
-
-	fprintf(f, "    a = 1;\n");
-	fprintf(f, "    b = 2;\n");
-	fprintf(f, "    c = a - b;\n");
-	fprintf(f, "    assert(a == int%d(1));\n", bits);
-	fprintf(f, "    assert(b == int%d(2));\n", bits);
-	fprintf(f, "    assert(c == int%d(-1));\n\n", bits);
-
-	fprintf(f, "    a = int%d::min;\n", bits);
-	fprintf(f, "    b = 1;\n");
-	fprintf(f, "    c = a - b;\n");
-	fprintf(f, "    assert(a == int%d::min);\n", bits);
-	fprintf(f, "    assert(b == int%d(1));\n", bits);
-	fprintf(f, "    assert(c == int%d::max);\n\n", bits);
-
-	fprintf(f, "    a = int%d::max;\n", bits);
-	fprintf(f, "    b = -1;\n");
-	fprintf(f, "    c = a - b;\n");
-	fprintf(f, "    assert(a == int%d::max);\n", bits);
-	fprintf(f, "    assert(b == int%d(-1));\n", bits);
-	fprintf(f, "    assert(c == int%d::min);\n\n", bits);
-
-	/* test mul */
-
-	fprintf(f, "    // test mul\n\n");
-
-	fprintf(f, "    std::cout << \"test mul\" << std::endl;\n");
-
-	fprintf(f, "    a = 2;\n");
-	fprintf(f, "    b = 3;\n");
-	fprintf(f, "    c = a * b;\n");
-	fprintf(f, "    assert(a == int%d(2));\n", bits);
-	fprintf(f, "    assert(b == int%d(3));\n", bits);
-	fprintf(f, "    assert(c == int%d(6));\n\n", bits);
-
-	fprintf(f, "    a = 2;\n");
-	fprintf(f, "    b = -3;\n");
-	fprintf(f, "    c = a * b;\n");
-	fprintf(f, "    assert(a == int%d(2));\n", bits);
-	fprintf(f, "    assert(b == int%d(-3));\n", bits);
-	fprintf(f, "    assert(c == int%d(-6));\n\n", bits);
-
-	fprintf(f, "    a = -2;\n");
-	fprintf(f, "    b = 3;\n");
-	fprintf(f, "    c = a * b;\n");
-	fprintf(f, "    assert(a == int%d(-2));\n", bits);
-	fprintf(f, "    assert(b == int%d(3));\n", bits);
-	fprintf(f, "    assert(c == int%d(-6));\n\n", bits);
-
-	fprintf(f, "    a = -2;\n");
-	fprintf(f, "    b = -3;\n");
-	fprintf(f, "    c = a * b;\n");
-	fprintf(f, "    assert(a == int%d(-2));\n", bits);
-	fprintf(f, "    assert(b == int%d(-3));\n", bits);
-	fprintf(f, "    assert(c == int%d(6));\n\n", bits);
-
-	fprintf(f, "    a = int%d::max;\n", bits);
-	fprintf(f, "    b = -1;\n");
-	fprintf(f, "    c = a * b - int%d(1);\n", bits);
-	fprintf(f, "    assert(a == int%d::max);\n", bits);
-	fprintf(f, "    assert(b == int%d(-1));\n", bits);
-	fprintf(f, "    assert(c == int%d::min);\n\n", bits);
-
-	/* test div / mod */
-
-	fprintf(f, "    // test div\n\n");
-	fprintf(f, "    std::cout << \"test div\" << std::endl;\n");
-
-	fprintf(f, "    a = 10;\n");
-	fprintf(f, "    b = 6;\n");
-	fprintf(f, "    c = a / b;\n");
-	fprintf(f, "    r = a %% b;\n");
-	fprintf(f, "    assert(a == int%d(10));\n", bits);
-	fprintf(f, "    assert(b == int%d(6));\n", bits);
-	fprintf(f, "    assert(c == int%d(1));\n", bits);
-	fprintf(f, "    assert(r == int%d(4));\n\n", bits);
-
-	fprintf(f, "    a = 10;\n");
-	fprintf(f, "    b = -6;\n");
-	fprintf(f, "    c = a / b;\n");
-	fprintf(f, "    r = a %% b;\n");
-	fprintf(f, "    assert(a == int%d(10));\n", bits);
-	fprintf(f, "    assert(b == int%d(-6));\n", bits);
-	fprintf(f, "    assert(c == int%d(-1));\n", bits);
-	fprintf(f, "    assert(r == int%d(4));\n\n", bits);
-
-	fprintf(f, "    a = -10;\n");
-	fprintf(f, "    b = 6;\n");
-	fprintf(f, "    c = a / b;\n");
-	fprintf(f, "    r = a %% b;\n");
-	fprintf(f, "    assert(a == int%d(-10));\n", bits);
-	fprintf(f, "    assert(b == int%d(6));\n", bits);
-	fprintf(f, "    assert(c == int%d(-1));\n", bits);
-	fprintf(f, "    assert(r == int%d(-4));\n\n", bits);
-
-	fprintf(f, "    a = -10;\n");
-	fprintf(f, "    b = -6;\n");
-	fprintf(f, "    c = a / b;\n");
-	fprintf(f, "    r = a %% b;\n");
-	fprintf(f, "    assert(a == int%d(-10));\n", bits);
-	fprintf(f, "    assert(b == int%d(-6));\n", bits);
-	fprintf(f, "    assert(c == int%d(1));\n", bits);
-	fprintf(f, "    assert(r == int%d(-4));\n\n", bits);
-
-	fprintf(f, "    a = int%d::max;\n", bits);
-	fprintf(f, "    b = int%d::max;\n", bits);
-	fprintf(f, "    c = a / b;\n");
-	fprintf(f, "    r = a %% b;\n");
-	fprintf(f, "    assert(c == int%d(1));\n", bits);
-	fprintf(f, "    assert(r == int%d(0ll));\n\n", bits);
-
-	/* test shift operators */
-
-	fprintf(f, "    // test operator<<\n\n");
-	fprintf(f, "    std::cout << \"test operator<<\" << std::endl;\n");
-
-	fprintf(f, "    a = 1;\n");
-	fprintf(f, "    c = a << 1;\n");
-	fprintf(f, "    assert(c == int%d(2));\n\n", bits);
-
-	fprintf(f, "    a = 1;\n");
-	fprintf(f, "    c = a << 0;\n");
-	fprintf(f, "    assert(c == int%d(1));\n\n", bits);
-
-	fprintf(f, "    a = 3;\n");
-	fprintf(f, "    c = a << 4;\n");
-	fprintf(f, "    assert(c == int%d(48));\n\n", bits);
-
-	fprintf(f, "    // test operator>>\n\n");
-	fprintf(f, "    a = 8;\n");
-	fprintf(f, "    c = a >> 1;\n");
-	fprintf(f, "    assert(c == int%d(4));\n\n", bits);
-
-	fprintf(f, "    a = 255;\n");
-	fprintf(f, "    c = a >> 4;\n");
-	fprintf(f, "    assert(c == int%d(15));\n\n", bits);
-
-	/* test bitwise operators */
-
-	fprintf(f, "    // test operator&\n\n");
-
-	fprintf(f, "    std::cout << \"test bitwise operators\" << std::endl;\n");
-
-	fprintf(f, "    a = 0xFF;\n");
-	fprintf(f, "    b = 0x0F;\n");
-	fprintf(f, "    c = a & b;\n");
-	fprintf(f, "    assert(c == int%d(0x0F));\n\n", bits);
-	fprintf(f, "    assert((int%d(0ll) & int%d(-1)) == int%d(0ll));\n", bits, bits, bits);
-	fprintf(f, "    assert((int%d(-1) & int%d(-1)) == int%d(-1));\n\n", bits, bits, bits);
-
-	fprintf(f, "    // test operator|\n\n");
-
-	fprintf(f, "    a = 0xF0;\n");
-	fprintf(f, "    b = 0x0F;\n");
-	fprintf(f, "    c = a | b;\n");
-	fprintf(f, "    assert(c == int%d(0xFF));\n\n", bits);
-	fprintf(f, "    assert((int%d(0ll) | int%d(0ll)) == int%d(0ll));\n", bits, bits, bits);
-	fprintf(f, "    assert((int%d(0ll) | int%d(-1)) == int%d(-1));\n\n", bits, bits, bits);
-
-	fprintf(f, "    // test operator^\n\n");
-	fprintf(f, "    a = 0xFF;\n");
-	fprintf(f, "    b = 0x0F;\n");
-	fprintf(f, "    c = a ^ b;\n");
-	fprintf(f, "    assert(c == int%d(0xF0));\n\n", bits);
-	fprintf(f, "    assert((int%d(-1) ^ int%d(-1)) == int%d(0ll));\n", bits, bits, bits);
-	fprintf(f, "    assert((int%d(0ll) ^ int%d(-1)) == int%d(-1));\n\n", bits, bits, bits);
-
-	fprintf(f, "    // test operator~\n\n");
-	fprintf(f, "    assert(~int%d(0ll) == int%d(-1));\n", bits, bits);
-	fprintf(f, "    assert(~int%d(-1) == int%d(0ll));\n", bits, bits);
-	fprintf(f, "    assert(~~int%d(-1) == int%d(-1));\n\n", bits, bits);
-
-	/* test compound assignment */
-
-	fprintf(f, "    // test compound assignment\n\n");
-
-	fprintf(f, "    std::cout << \"test compound assignment\" << std::endl;\n");
-
-	fprintf(f, "    a = 10; a += int%d(5);  assert(a == int%d(15));\n", bits, bits);
-	fprintf(f, "    a = 10; a -= int%d(3);  assert(a == int%d(7));\n", bits, bits);
-	fprintf(f, "    a = 10; a *= int%d(3);  assert(a == int%d(30));\n", bits, bits);
-	fprintf(f, "    a = 10; a /= int%d(3);  assert(a == int%d(3));\n", bits, bits);
-	fprintf(f, "    a = 10; a %%= int%d(3); assert(a == int%d(1));\n", bits, bits);
-	fprintf(f, "    a = 0xFF; a &= int%d(0x0F); assert(a == int%d(0x0F));\n", bits, bits);
-	fprintf(f, "    a = 0xF0; a |= int%d(0x0F); assert(a == int%d(0xFF));\n", bits, bits);
-	fprintf(f, "    a = 0xFF; a ^= int%d(0x0F); assert(a == int%d(0xF0));\n", bits, bits);
-	fprintf(f, "    a = 1;    a <<= 4;           assert(a == int%d(16));\n", bits);
-	fprintf(f, "    a = 16;   a >>= 4;           assert(a == int%d(1));\n\n", bits);
-
-	/* test increment/decrement */
-
-	fprintf(f, "    // test increment/decrement\n\n");
-
-	fprintf(f, "    std::cout << \"test increment/decrement\" << std::endl;\n");
-
-	fprintf(f, "    a = 0ll;\n");
-	fprintf(f, "    ++a;\n");
-	fprintf(f, "    assert(a == int%d(1));\n\n", bits);
-
-	fprintf(f, "    a = 0ll;\n");
-	fprintf(f, "    b = a++;\n");
-	fprintf(f, "    assert(b == int%d(0ll));\n", bits);
-	fprintf(f, "    assert(a == int%d(1));\n\n", bits);
-
-	fprintf(f, "    a = 0ll;\n");
-	fprintf(f, "    --a;\n");
-	fprintf(f, "    assert(a == int%d(-1));\n\n", bits);
-
-	fprintf(f, "    a = 0ll;\n");
-	fprintf(f, "    b = a--;\n");
-	fprintf(f, "    assert(b == int%d(0ll));\n", bits);
-	fprintf(f, "    assert(a == int%d(-1));\n\n", bits);
-
-	fprintf(f, "    a = int%d::max;\n", bits);
-	fprintf(f, "    ++a;\n");
-	fprintf(f, "    assert(a == int%d::min);\n\n", bits);
-
-	/* test to_decimal_string */
-
-	fprintf(f, "    // test to_decimal_string\n\n");
-	
-	fprintf(f, "    std::cout << \"test to_decimal_string\" << std::endl;\n");
-	
-	fprintf(f, "    assert(int%d(0ll).to_decimal_string() == \"0\");\n", bits);
-	fprintf(f, "    assert(int%d(1).to_decimal_string() == \"1\");\n", bits);
-	fprintf(f, "    assert(int%d(-1).to_decimal_string() == \"-1\");\n", bits);
-	fprintf(f, "    assert(int%d(123456789).to_decimal_string() == \"123456789\");\n", bits);
-	fprintf(f, "    assert(int%d(-123456789).to_decimal_string() == \"-123456789\");\n\n", bits);
-
-	/* test stream output */
-
-	fprintf(f, "    // test operator<<(ostream)\n\n");
-
-	fprintf(f, "    std::cout << \"test operator<<\" << std::endl;\n");
-
-	fprintf(f, "    {\n");
-	fprintf(f, "        std::ostringstream oss;\n");
-	fprintf(f, "        oss << int%d(42);\n", bits);
-	fprintf(f, "        assert(oss.str() == \"42\");\n");
-	fprintf(f, "    }\n\n");
-
-	fprintf(f, "    printf(\"All tests passed.\\n\");\n\n");
-
-	fprintf(f, "    return 0;\n");
-	fprintf(f, "}\n");
-
-	fclose(f);
+    char s[128];
+    FILE* f = NULL;
+
+    sprintf(s, "test_cint%d.cpp", bits);
+
+    printf("generating %s\n", s);
+
+    f = fopen(s, "w");
+    if (f == NULL)
+        error("Cannot open file", s);
+
+    fprintf(f, "#include <cstdio>\n");
+    fprintf(f, "#include <cassert>\n");
+    fprintf(f, "#include <sstream>\n");
+    fprintf(f, "#include \"cint%d.h\"\n\n", bits);
+
+    fprintf(f, "int main()\n");
+    fprintf(f, "{\n");
+    fprintf(f, "    int%d a, b, c, r;\n\n", bits);
+
+    /* test relational operators */
+
+    fprintf(f, "    // test relational operators\n\n");
+    fprintf(f, "    std::cout << \"test relational operators\" << std::endl;\n");
+    fprintf(f, "    assert(int%d(1) < int%d(2));\n", bits, bits);
+    fprintf(f, "    assert(int%d(2) > int%d(1));\n", bits, bits);
+    fprintf(f, "    assert(int%d(1) <= int%d(1));\n", bits, bits);
+    fprintf(f, "    assert(int%d(1) >= int%d(1));\n", bits, bits);
+    fprintf(f, "    assert(int%d(1) != int%d(2));\n", bits, bits);
+    fprintf(f, "    assert(int%d(-1) < int%d(1));\n", bits, bits);
+    fprintf(f, "    assert(int%d(-2) < int%d(-1));\n", bits, bits);
+    fprintf(f, "    assert(int%d::min < int%d::max);\n\n", bits, bits);
+
+    /* test bool conversion */
+
+    fprintf(f, "    // test bool conversion\n\n");
+    fprintf(f, "    std::cout << \"test bool conversion\" << std::endl;\n");
+    fprintf(f, "    assert(!(bool)int%d(0ll));\n", bits);
+    fprintf(f, "    assert((bool)int%d(1));\n", bits);
+    fprintf(f, "    assert((bool)int%d(-1));\n", bits);
+    fprintf(f, "    assert((bool)int%d::min);\n\n", bits);
+
+    /* test is_negative */
+
+    fprintf(f, "    // test is_negative\n\n");
+    fprintf(f, "    std::cout << \"test is_negative\" << std::endl;\n");
+    fprintf(f, "    assert(!int%d(0ll).is_negative());\n", bits);
+    fprintf(f, "    assert(!int%d(1).is_negative());\n", bits);
+    fprintf(f, "    assert(int%d(-1).is_negative());\n", bits);
+    fprintf(f, "    assert(int%d::min.is_negative());\n", bits);
+    fprintf(f, "    assert(!int%d::max.is_negative());\n\n", bits);
+
+    /* test unary minus */
+
+    fprintf(f, "    // test unary minus\n\n");
+    fprintf(f, "    std::cout << \"test unary minus\" << std::endl;\n");
+    fprintf(f, "    assert(-int%d(1) == int%d(-1));\n", bits, bits);
+    fprintf(f, "    assert(-int%d(-1) == int%d(1));\n", bits, bits);
+    fprintf(f, "    assert(-int%d(0ll) == int%d(0ll));\n", bits, bits);
+    fprintf(f, "    assert(-int%d::min == int%d::min);\n\n", bits, bits);
+
+    /* test add */
+
+    fprintf(f, "    // test add\n\n");
+    fprintf(f, "    std::cout << \"test add\" << std::endl;\n");
+
+    fprintf(f, "    a = 1;\n");
+    fprintf(f, "    b = 2;\n");
+    fprintf(f, "    c = a + b;\n");
+    fprintf(f, "    assert(a == int%d(1));\n", bits);
+    fprintf(f, "    assert(b == int%d(2));\n", bits);
+    fprintf(f, "    assert(c == int%d(3));\n\n", bits);
+
+    fprintf(f, "    a = 1;\n");
+    fprintf(f, "    b = -2;\n");
+    fprintf(f, "    c = a + b;\n");
+    fprintf(f, "    assert(a == int%d(1));\n", bits);
+    fprintf(f, "    assert(b == int%d(-2));\n", bits);
+    fprintf(f, "    assert(c == int%d(-1));\n\n", bits);
+
+    fprintf(f, "    a = -2;\n");
+    fprintf(f, "    b = 1;\n");
+    fprintf(f, "    c = a + b;\n");
+    fprintf(f, "    assert(a == int%d(-2));\n", bits);
+    fprintf(f, "    assert(b == int%d(1));\n", bits);
+    fprintf(f, "    assert(c == int%d(-1));\n\n", bits);
+
+    fprintf(f, "    a = int%d::max;\n", bits);
+    fprintf(f, "    b = 1;\n");
+    fprintf(f, "    c = a + b;\n");
+    fprintf(f, "    assert(a == int%d::max);\n", bits);
+    fprintf(f, "    assert(b == int%d(1));\n", bits);
+    fprintf(f, "    assert(c == int%d::min);\n\n", bits);
+
+    fprintf(f, "    a = int%d::min;\n", bits);
+    fprintf(f, "    b = -1;\n");
+    fprintf(f, "    c = a + b;\n");
+    fprintf(f, "    assert(a == int%d::min);\n", bits);
+    fprintf(f, "    assert(b == int%d(-1));\n", bits);
+    fprintf(f, "    assert(c == int%d::max);\n\n", bits);
+
+    /* test sub */
+
+    fprintf(f, "    // test sub\n\n");
+    fprintf(f, "    std::cout << \"test sub\" << std::endl;\n");
+
+    fprintf(f, "    a = 1;\n");
+    fprintf(f, "    b = 2;\n");
+    fprintf(f, "    c = a - b;\n");
+    fprintf(f, "    assert(a == int%d(1));\n", bits);
+    fprintf(f, "    assert(b == int%d(2));\n", bits);
+    fprintf(f, "    assert(c == int%d(-1));\n\n", bits);
+
+    fprintf(f, "    a = int%d::min;\n", bits);
+    fprintf(f, "    b = 1;\n");
+    fprintf(f, "    c = a - b;\n");
+    fprintf(f, "    assert(a == int%d::min);\n", bits);
+    fprintf(f, "    assert(b == int%d(1));\n", bits);
+    fprintf(f, "    assert(c == int%d::max);\n\n", bits);
+
+    fprintf(f, "    a = int%d::max;\n", bits);
+    fprintf(f, "    b = -1;\n");
+    fprintf(f, "    c = a - b;\n");
+    fprintf(f, "    assert(a == int%d::max);\n", bits);
+    fprintf(f, "    assert(b == int%d(-1));\n", bits);
+    fprintf(f, "    assert(c == int%d::min);\n\n", bits);
+
+    /* test mul */
+
+    fprintf(f, "    // test mul\n\n");
+
+    fprintf(f, "    std::cout << \"test mul\" << std::endl;\n");
+
+    fprintf(f, "    a = 2;\n");
+    fprintf(f, "    b = 3;\n");
+    fprintf(f, "    c = a * b;\n");
+    fprintf(f, "    assert(a == int%d(2));\n", bits);
+    fprintf(f, "    assert(b == int%d(3));\n", bits);
+    fprintf(f, "    assert(c == int%d(6));\n\n", bits);
+
+    fprintf(f, "    a = 2;\n");
+    fprintf(f, "    b = -3;\n");
+    fprintf(f, "    c = a * b;\n");
+    fprintf(f, "    assert(a == int%d(2));\n", bits);
+    fprintf(f, "    assert(b == int%d(-3));\n", bits);
+    fprintf(f, "    assert(c == int%d(-6));\n\n", bits);
+
+    fprintf(f, "    a = -2;\n");
+    fprintf(f, "    b = 3;\n");
+    fprintf(f, "    c = a * b;\n");
+    fprintf(f, "    assert(a == int%d(-2));\n", bits);
+    fprintf(f, "    assert(b == int%d(3));\n", bits);
+    fprintf(f, "    assert(c == int%d(-6));\n\n", bits);
+
+    fprintf(f, "    a = -2;\n");
+    fprintf(f, "    b = -3;\n");
+    fprintf(f, "    c = a * b;\n");
+    fprintf(f, "    assert(a == int%d(-2));\n", bits);
+    fprintf(f, "    assert(b == int%d(-3));\n", bits);
+    fprintf(f, "    assert(c == int%d(6));\n\n", bits);
+
+    fprintf(f, "    a = int%d::max;\n", bits);
+    fprintf(f, "    b = -1;\n");
+    fprintf(f, "    c = a * b - int%d(1);\n", bits);
+    fprintf(f, "    assert(a == int%d::max);\n", bits);
+    fprintf(f, "    assert(b == int%d(-1));\n", bits);
+    fprintf(f, "    assert(c == int%d::min);\n\n", bits);
+
+    /* test div / mod */
+
+    fprintf(f, "    // test div\n\n");
+    fprintf(f, "    std::cout << \"test div\" << std::endl;\n");
+
+    fprintf(f, "    a = 10;\n");
+    fprintf(f, "    b = 6;\n");
+    fprintf(f, "    c = a / b;\n");
+    fprintf(f, "    r = a %% b;\n");
+    fprintf(f, "    assert(a == int%d(10));\n", bits);
+    fprintf(f, "    assert(b == int%d(6));\n", bits);
+    fprintf(f, "    assert(c == int%d(1));\n", bits);
+    fprintf(f, "    assert(r == int%d(4));\n\n", bits);
+
+    fprintf(f, "    a = 10;\n");
+    fprintf(f, "    b = -6;\n");
+    fprintf(f, "    c = a / b;\n");
+    fprintf(f, "    r = a %% b;\n");
+    fprintf(f, "    assert(a == int%d(10));\n", bits);
+    fprintf(f, "    assert(b == int%d(-6));\n", bits);
+    fprintf(f, "    assert(c == int%d(-1));\n", bits);
+    fprintf(f, "    assert(r == int%d(4));\n\n", bits);
+
+    fprintf(f, "    a = -10;\n");
+    fprintf(f, "    b = 6;\n");
+    fprintf(f, "    c = a / b;\n");
+    fprintf(f, "    r = a %% b;\n");
+    fprintf(f, "    assert(a == int%d(-10));\n", bits);
+    fprintf(f, "    assert(b == int%d(6));\n", bits);
+    fprintf(f, "    assert(c == int%d(-1));\n", bits);
+    fprintf(f, "    assert(r == int%d(-4));\n\n", bits);
+
+    fprintf(f, "    a = -10;\n");
+    fprintf(f, "    b = -6;\n");
+    fprintf(f, "    c = a / b;\n");
+    fprintf(f, "    r = a %% b;\n");
+    fprintf(f, "    assert(a == int%d(-10));\n", bits);
+    fprintf(f, "    assert(b == int%d(-6));\n", bits);
+    fprintf(f, "    assert(c == int%d(1));\n", bits);
+    fprintf(f, "    assert(r == int%d(-4));\n\n", bits);
+
+    fprintf(f, "    a = int%d::max;\n", bits);
+    fprintf(f, "    b = int%d::max;\n", bits);
+    fprintf(f, "    c = a / b;\n");
+    fprintf(f, "    r = a %% b;\n");
+    fprintf(f, "    assert(c == int%d(1));\n", bits);
+    fprintf(f, "    assert(r == int%d(0ll));\n\n", bits);
+
+    /* test shift operators */
+
+    fprintf(f, "    // test operator<<\n\n");
+    fprintf(f, "    std::cout << \"test operator<<\" << std::endl;\n");
+
+    fprintf(f, "    a = 1;\n");
+    fprintf(f, "    c = a << 1;\n");
+    fprintf(f, "    assert(c == int%d(2));\n\n", bits);
+
+    fprintf(f, "    a = 1;\n");
+    fprintf(f, "    c = a << 0;\n");
+    fprintf(f, "    assert(c == int%d(1));\n\n", bits);
+
+    fprintf(f, "    a = 3;\n");
+    fprintf(f, "    c = a << 4;\n");
+    fprintf(f, "    assert(c == int%d(48));\n\n", bits);
+
+    fprintf(f, "    // test operator>>\n\n");
+    fprintf(f, "    a = 8;\n");
+    fprintf(f, "    c = a >> 1;\n");
+    fprintf(f, "    assert(c == int%d(4));\n\n", bits);
+
+    fprintf(f, "    a = 255;\n");
+    fprintf(f, "    c = a >> 4;\n");
+    fprintf(f, "    assert(c == int%d(15));\n\n", bits);
+
+    /* test bitwise operators */
+
+    fprintf(f, "    // test operator&\n\n");
+
+    fprintf(f, "    std::cout << \"test bitwise operators\" << std::endl;\n");
+
+    fprintf(f, "    a = 0xFF;\n");
+    fprintf(f, "    b = 0x0F;\n");
+    fprintf(f, "    c = a & b;\n");
+    fprintf(f, "    assert(c == int%d(0x0F));\n\n", bits);
+    fprintf(f, "    assert((int%d(0ll) & int%d(-1)) == int%d(0ll));\n", bits, bits, bits);
+    fprintf(f, "    assert((int%d(-1) & int%d(-1)) == int%d(-1));\n\n", bits, bits, bits);
+
+    fprintf(f, "    // test operator|\n\n");
+
+    fprintf(f, "    a = 0xF0;\n");
+    fprintf(f, "    b = 0x0F;\n");
+    fprintf(f, "    c = a | b;\n");
+    fprintf(f, "    assert(c == int%d(0xFF));\n\n", bits);
+    fprintf(f, "    assert((int%d(0ll) | int%d(0ll)) == int%d(0ll));\n", bits, bits, bits);
+    fprintf(f, "    assert((int%d(0ll) | int%d(-1)) == int%d(-1));\n\n", bits, bits, bits);
+
+    fprintf(f, "    // test operator^\n\n");
+    fprintf(f, "    a = 0xFF;\n");
+    fprintf(f, "    b = 0x0F;\n");
+    fprintf(f, "    c = a ^ b;\n");
+    fprintf(f, "    assert(c == int%d(0xF0));\n\n", bits);
+    fprintf(f, "    assert((int%d(-1) ^ int%d(-1)) == int%d(0ll));\n", bits, bits, bits);
+    fprintf(f, "    assert((int%d(0ll) ^ int%d(-1)) == int%d(-1));\n\n", bits, bits, bits);
+
+    fprintf(f, "    // test operator~\n\n");
+    fprintf(f, "    assert(~int%d(0ll) == int%d(-1));\n", bits, bits);
+    fprintf(f, "    assert(~int%d(-1) == int%d(0ll));\n", bits, bits);
+    fprintf(f, "    assert(~~int%d(-1) == int%d(-1));\n\n", bits, bits);
+
+    /* test compound assignment */
+
+    fprintf(f, "    // test compound assignment\n\n");
+
+    fprintf(f, "    std::cout << \"test compound assignment\" << std::endl;\n");
+
+    fprintf(f, "    a = 10; a += int%d(5);  assert(a == int%d(15));\n", bits, bits);
+    fprintf(f, "    a = 10; a -= int%d(3);  assert(a == int%d(7));\n", bits, bits);
+    fprintf(f, "    a = 10; a *= int%d(3);  assert(a == int%d(30));\n", bits, bits);
+    fprintf(f, "    a = 10; a /= int%d(3);  assert(a == int%d(3));\n", bits, bits);
+    fprintf(f, "    a = 10; a %%= int%d(3); assert(a == int%d(1));\n", bits, bits);
+    fprintf(f, "    a = 0xFF; a &= int%d(0x0F); assert(a == int%d(0x0F));\n", bits, bits);
+    fprintf(f, "    a = 0xF0; a |= int%d(0x0F); assert(a == int%d(0xFF));\n", bits, bits);
+    fprintf(f, "    a = 0xFF; a ^= int%d(0x0F); assert(a == int%d(0xF0));\n", bits, bits);
+    fprintf(f, "    a = 1;    a <<= 4;           assert(a == int%d(16));\n", bits);
+    fprintf(f, "    a = 16;   a >>= 4;           assert(a == int%d(1));\n\n", bits);
+
+    /* test increment/decrement */
+
+    fprintf(f, "    // test increment/decrement\n\n");
+
+    fprintf(f, "    std::cout << \"test increment/decrement\" << std::endl;\n");
+
+    fprintf(f, "    a = 0ll;\n");
+    fprintf(f, "    ++a;\n");
+    fprintf(f, "    assert(a == int%d(1));\n\n", bits);
+
+    fprintf(f, "    a = 0ll;\n");
+    fprintf(f, "    b = a++;\n");
+    fprintf(f, "    assert(b == int%d(0ll));\n", bits);
+    fprintf(f, "    assert(a == int%d(1));\n\n", bits);
+
+    fprintf(f, "    a = 0ll;\n");
+    fprintf(f, "    --a;\n");
+    fprintf(f, "    assert(a == int%d(-1));\n\n", bits);
+
+    fprintf(f, "    a = 0ll;\n");
+    fprintf(f, "    b = a--;\n");
+    fprintf(f, "    assert(b == int%d(0ll));\n", bits);
+    fprintf(f, "    assert(a == int%d(-1));\n\n", bits);
+
+    fprintf(f, "    a = int%d::max;\n", bits);
+    fprintf(f, "    ++a;\n");
+    fprintf(f, "    assert(a == int%d::min);\n\n", bits);
+
+    /* test to_decimal_string */
+
+    fprintf(f, "    // test to_decimal_string\n\n");
+    
+    fprintf(f, "    std::cout << \"test to_decimal_string\" << std::endl;\n");
+    
+    fprintf(f, "    assert(int%d(0ll).to_decimal_string() == \"0\");\n", bits);
+    fprintf(f, "    assert(int%d(1).to_decimal_string() == \"1\");\n", bits);
+    fprintf(f, "    assert(int%d(-1).to_decimal_string() == \"-1\");\n", bits);
+    fprintf(f, "    assert(int%d(123456789).to_decimal_string() == \"123456789\");\n", bits);
+    fprintf(f, "    assert(int%d(-123456789).to_decimal_string() == \"-123456789\");\n\n", bits);
+
+    /* test stream output */
+
+    fprintf(f, "    // test operator<<(ostream)\n\n");
+
+    fprintf(f, "    std::cout << \"test operator<<\" << std::endl;\n");
+
+    fprintf(f, "    {\n");
+    fprintf(f, "        std::ostringstream oss;\n");
+    fprintf(f, "        oss << int%d(42);\n", bits);
+    fprintf(f, "        assert(oss.str() == \"42\");\n");
+    fprintf(f, "    }\n\n");
+
+    fprintf(f, "    printf(\"All tests passed.\\n\");\n\n");
+
+    fprintf(f, "    return 0;\n");
+    fprintf(f, "}\n");
+
+    fclose(f);
 }
 
 void generate_makefile(void)
 {
-	char s[128];
-	FILE* f = NULL;
+    char s[128];
+    FILE* f = NULL;
 
-	sprintf(s, "Makefile");
-	printf("generating %s\n", s);
-	f = fopen(s, "w");
-	if (f == NULL)
-		error("Cannot open file", s);
+    sprintf(s, "Makefile");
+    printf("generating %s\n", s);
+    f = fopen(s, "w");
+    if (f == NULL)
+        error("Cannot open file", s);
 
-	fprintf(f, "# Generated by genbigint -c unix %d\n", bits);
-	fprintf(f, "# Build with: make [BITS=%d]\n\n", bits);
-	fprintf(f, "BITS ?= %d\n\n", bits);
-	fprintf(f, "ASM_OBJ = int$(BITS)_asm.o\n");
-	fprintf(f, "C_OBJ = int$(BITS).o\n");
-	fprintf(f, "CXX_OBJ = cint$(BITS).o\n");
-	fprintf(f, "TEST_C = test_int$(BITS)\n");
-	fprintf(f, "TEST_CXX = test_cint$(BITS)\n\n");
+    fprintf(f, "# Generated by genbigint -c unix %d\n", bits);
+    fprintf(f, "# Build with: make [BITS=%d]\n\n", bits);
+    fprintf(f, "BITS ?= %d\n\n", bits);
+    fprintf(f, "ASM_OBJ = int$(BITS)_asm.o\n");
+    fprintf(f, "C_OBJ = int$(BITS).o\n");
+    fprintf(f, "CXX_OBJ = cint$(BITS).o\n");
+    fprintf(f, "TEST_C = test_int$(BITS)\n");
+    fprintf(f, "TEST_CXX = test_cint$(BITS)\n\n");
 
-	fprintf(f, "all: $(TEST_C) $(TEST_CXX)\n\n");
+    fprintf(f, "all: $(TEST_C) $(TEST_CXX)\n\n");
 
-	fprintf(f, "$(ASM_OBJ): int$(BITS).asm\n");
-	fprintf(f, "\tnasm -f elf64 -o $(ASM_OBJ) int$(BITS).asm\n\n");
+    fprintf(f, "$(ASM_OBJ): int$(BITS).asm\n");
+    fprintf(f, "\tnasm -f elf64 -o $(ASM_OBJ) int$(BITS).asm\n\n");
 
-	fprintf(f, "$(C_OBJ): int$(BITS).c int$(BITS).h\n");
-	fprintf(f, "\tgcc -c -o $(C_OBJ) int$(BITS).c\n\n");
+    fprintf(f, "$(C_OBJ): int$(BITS).c int$(BITS).h\n");
+    fprintf(f, "\tgcc -c -o $(C_OBJ) int$(BITS).c\n\n");
 
-	fprintf(f, "$(TEST_C).o: test_int$(BITS).c int$(BITS).h\n");
-	fprintf(f, "\tgcc -c -o $(TEST_C).o test_int$(BITS).c\n\n");
+    fprintf(f, "$(TEST_C).o: test_int$(BITS).c int$(BITS).h\n");
+    fprintf(f, "\tgcc -c -o $(TEST_C).o test_int$(BITS).c\n\n");
 
-	fprintf(f, "$(TEST_C): $(TEST_C).o $(C_OBJ) $(ASM_OBJ)\n");
-	fprintf(f, "\tgcc -o $(TEST_C) $(TEST_C).o $(C_OBJ) $(ASM_OBJ)\n\n");
+    fprintf(f, "$(TEST_C): $(TEST_C).o $(C_OBJ) $(ASM_OBJ)\n");
+    fprintf(f, "\tgcc -o $(TEST_C) $(TEST_C).o $(C_OBJ) $(ASM_OBJ)\n\n");
 
-	fprintf(f, "$(CXX_OBJ): cint$(BITS).cpp cint$(BITS).h int$(BITS).h\n");
-	fprintf(f, "\tg++ -c -o $(CXX_OBJ) cint$(BITS).cpp\n\n");
+    fprintf(f, "$(CXX_OBJ): cint$(BITS).cpp cint$(BITS).h int$(BITS).h\n");
+    fprintf(f, "\tg++ -c -o $(CXX_OBJ) cint$(BITS).cpp\n\n");
 
-	fprintf(f, "$(TEST_CXX).o: test_cint$(BITS).cpp cint$(BITS).h int$(BITS).h\n");
-	fprintf(f, "\tg++ -c -o $(TEST_CXX).o test_cint$(BITS).cpp\n\n");
+    fprintf(f, "$(TEST_CXX).o: test_cint$(BITS).cpp cint$(BITS).h int$(BITS).h\n");
+    fprintf(f, "\tg++ -c -o $(TEST_CXX).o test_cint$(BITS).cpp\n\n");
 
-	fprintf(f, "$(TEST_CXX): $(TEST_CXX).o $(CXX_OBJ) $(C_OBJ) $(ASM_OBJ)\n");
-	fprintf(f, "\tg++ -o $(TEST_CXX) $(TEST_CXX).o $(CXX_OBJ) $(C_OBJ) $(ASM_OBJ)\n\n");
+    fprintf(f, "$(TEST_CXX): $(TEST_CXX).o $(CXX_OBJ) $(C_OBJ) $(ASM_OBJ)\n");
+    fprintf(f, "\tg++ -o $(TEST_CXX) $(TEST_CXX).o $(CXX_OBJ) $(C_OBJ) $(ASM_OBJ)\n\n");
 
-	fprintf(f, "clean:\n");
-	fprintf(f, "\trm -f $(ASM_OBJ) $(C_OBJ) $(CXX_OBJ) $(TEST_C).o $(TEST_CXX).o $(TEST_C) $(TEST_CXX)\n");
+    fprintf(f, "clean:\n");
+    fprintf(f, "\trm -f $(ASM_OBJ) $(C_OBJ) $(CXX_OBJ) $(TEST_C).o $(TEST_CXX).o $(TEST_C) $(TEST_CXX)\n");
 
-	fclose(f);
+    fclose(f);
 }
 
 void generate_project_custom_build(FILE* f)
 {
-	char s[128];
-	sprintf(s, "int%d", bits);
+    char s[128];
+    sprintf(s, "int%d", bits);
 
-	fprintf(f, "    <CustomBuild Include=\"%s.asm\">\n", s);
-	fprintf(f, "      <FileType>Document</FileType>\n");
-	fprintf(f, "      <Command>nasm -fwin64 -o%s.obj %s.asm</Command>\n", s, s);
-	fprintf(f, "      <Outputs>%s.obj</Outputs>\n", s);
-	fprintf(f, "      <OutputItemType>Object</OutputItemType>\n"
-		"      <BuildInParallel>true</BuildInParallel>\n"
-		"    </CustomBuild>\n");
+    fprintf(f, "    <CustomBuild Include=\"%s.asm\">\n", s);
+    fprintf(f, "      <FileType>Document</FileType>\n");
+    fprintf(f, "      <Command>nasm -fwin64 -o%s.obj %s.asm</Command>\n", s, s);
+    fprintf(f, "      <Outputs>%s.obj</Outputs>\n", s);
+    fprintf(f, "      <OutputItemType>Object</OutputItemType>\n"
+        "      <BuildInParallel>true</BuildInParallel>\n"
+        "    </CustomBuild>\n");
 }
 
 void generate_project(char c)
 {
-	char s[128];
-	FILE* f = NULL;
+    char s[128];
+    FILE* f = NULL;
 
-	if (c == 'c')
-		sprintf(s, "test_int%d.vcxproj", bits);
-	else
-		sprintf(s, "test_cint%d.vcxproj", bits);
+    if (c == 'c')
+        sprintf(s, "test_int%d.vcxproj", bits);
+    else
+        sprintf(s, "test_cint%d.vcxproj", bits);
 
-	printf("generating %s\n", s);
+    printf("generating %s\n", s);
 
-	f = fopen(s, "w");
-	if (f == NULL)
-		error("Cannot open file", s);
-	fprintf(f, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
-		"<Project DefaultTargets=\"Build\" xmlns=\"http://schemas.microsoft.com/developer/msbuild/2003\">\n"
-		"  <ItemGroup Label=\"ProjectConfigurations\">\n"
-		"    <ProjectConfiguration Include=\"Release|x64\">\n"
-		"      <Configuration>Release</Configuration>\n"
-		"      <Platform>x64</Platform>\n"
-		"    </ProjectConfiguration>\n"
-		"    <ProjectConfiguration Include=\"Debug|x64\">\n"
-		"      <Configuration>Debug</Configuration>\n"
-		"      <Platform>x64</Platform>\n"
-		"    </ProjectConfiguration>\n"
-		"  </ItemGroup>\n"
-		"  <ItemGroup>\n");
+    f = fopen(s, "w");
+    if (f == NULL)
+        error("Cannot open file", s);
+    fprintf(f, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+        "<Project DefaultTargets=\"Build\" xmlns=\"http://schemas.microsoft.com/developer/msbuild/2003\">\n"
+        "  <ItemGroup Label=\"ProjectConfigurations\">\n"
+        "    <ProjectConfiguration Include=\"Release|x64\">\n"
+        "      <Configuration>Release</Configuration>\n"
+        "      <Platform>x64</Platform>\n"
+        "    </ProjectConfiguration>\n"
+        "    <ProjectConfiguration Include=\"Debug|x64\">\n"
+        "      <Configuration>Debug</Configuration>\n"
+        "      <Platform>x64</Platform>\n"
+        "    </ProjectConfiguration>\n"
+        "  </ItemGroup>\n"
+        "  <ItemGroup>\n");
 
-	generate_project_custom_build(f);
+    generate_project_custom_build(f);
 
-	fprintf(f, "  </ItemGroup>\n"
-		"  <ItemGroup>\n"
-		"    <ClCompile Include=\"int%d.c\"/>\n", bits);
-	if (c == 'c')
-		fprintf(f, "    <ClCompile Include=\"test_int%d.c\"/>\n", bits);
-	else
-		fprintf(f, "    <ClCompile Include=\"cint%d.cpp\"/>\n"
-			"    <ClCompile Include=\"test_cint%d.cpp\"/>\n", bits, bits);
-	
-		fprintf(f, "  </ItemGroup>\n"
-			"  <ItemGroup>\n"
-			"    <ClInclude Include=\"int%d.h\"/>\n", bits);
-		
-	if (c != 'c')
-		fprintf(f, "    <ClInclude Include=\"cint%d.h\"/>\n", bits);
-	fprintf(f, "  </ItemGroup>\n");
+    fprintf(f, "  </ItemGroup>\n"
+        "  <ItemGroup>\n"
+        "    <ClCompile Include=\"int%d.c\"/>\n", bits);
+    if (c == 'c')
+        fprintf(f, "    <ClCompile Include=\"test_int%d.c\"/>\n", bits);
+    else
+        fprintf(f, "    <ClCompile Include=\"cint%d.cpp\"/>\n"
+            "    <ClCompile Include=\"test_cint%d.cpp\"/>\n", bits, bits);
+    
+        fprintf(f, "  </ItemGroup>\n"
+            "  <ItemGroup>\n"
+            "    <ClInclude Include=\"int%d.h\"/>\n", bits);
+        
+    if (c != 'c')
+        fprintf(f, "    <ClInclude Include=\"cint%d.h\"/>\n", bits);
+    fprintf(f, "  </ItemGroup>\n");
 
-	fprintf(f, "%s",
-		"  <PropertyGroup Label=\"Globals\">\n"
-		"    <VCProjectVersion>17.0</VCProjectVersion>\n"
-		"    <Keyword>Win32Proj</Keyword>\n"
-		"    <ProjectGuid>{5fde6895-ddd7-4173-9d15-d609a12293cc}</ProjectGuid>\n"
-		"    <RootNamespace>testint256</RootNamespace>\n"
-		"    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>\n"
-		"  </PropertyGroup>\n"
-		"  <Import Project=\"$(VCTargetsPath)\\Microsoft.Cpp.Default.props\" />\n"
-		"  <PropertyGroup Condition=\"'$(Configuration)|$(Platform)'=='Release|x64'\" Label=\"Configuration\">\n"
-		"    <ConfigurationType>Application</ConfigurationType>\n"
-		"    <UseDebugLibraries>false</UseDebugLibraries>\n"
-		"    <PlatformToolset>v143</PlatformToolset>\n"
-		"    <WholeProgramOptimization>true</WholeProgramOptimization>\n"
-		"    <CharacterSet>Unicode</CharacterSet>\n"
-		"  </PropertyGroup>\n"
-		"  <PropertyGroup Condition=\"'$(Configuration)|$(Platform)'=='Debug|x64'\" Label=\"Configuration\">\n"
-		"    <ConfigurationType>Application</ConfigurationType>\n"
-		"    <UseDebugLibraries>true</UseDebugLibraries>\n"
-		"    <PlatformToolset>v143</PlatformToolset>\n"
-		"    <WholeProgramOptimization>false</WholeProgramOptimization>\n"
-		"    <CharacterSet>Unicode</CharacterSet>\n"
-		"  </PropertyGroup>\n"
-		"  <Import Project=\"$(VCTargetsPath)\\Microsoft.Cpp.props\" />\n"
-		"  <ImportGroup Label=\"ExtensionSettings\" />\n"
-		"  <ImportGroup Label=\"Shared\" />\n"
-		"  <ImportGroup Label=\"PropertySheets\" Condition=\"'$(Configuration)|$(Platform)'=='Release|x64'\">\n"
-		"    <Import Project=\"$(UserRootDir)\\Microsoft.Cpp.$(Platform).user.props\" Condition=\"exists('$(UserRootDir)\\Microsoft.Cpp.$(Platform).user.props')\" Label=\"LocalAppDataPlatform\" />\n"
-		"  </ImportGroup>\n"
-		"  <ImportGroup Label=\"PropertySheets\" Condition=\"'$(Configuration)|$(Platform)'=='Debug|x64'\">\n"
-		"    <Import Project=\"$(UserRootDir)\\Microsoft.Cpp.$(Platform).user.props\" Condition=\"exists('$(UserRootDir)\\Microsoft.Cpp.$(Platform).user.props')\" Label=\"LocalAppDataPlatform\" />\n"
-		"  </ImportGroup>\n"
-		"  <PropertyGroup Label=\"UserMacros\" />\n"
-		"  <ItemDefinitionGroup Condition=\"'$(Configuration)|$(Platform)'=='Release|x64'\">\n"
-		"    <ClCompile>\n"
-		"      <WarningLevel>Level3</WarningLevel>\n"
-		"      <FunctionLevelLinking>true</FunctionLevelLinking>\n"
-		"      <IntrinsicFunctions>true</IntrinsicFunctions>\n"
-		"      <SDLCheck>true</SDLCheck>\n"
-		"      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>\n"
-		"      <ConformanceMode>true</ConformanceMode>\n"
-		"    </ClCompile>\n"
-		"    <Link>\n"
-		"      <SubSystem>Console</SubSystem>\n"
-		"      <EnableCOMDATFolding>true</EnableCOMDATFolding>\n"
-		"      <OptimizeReferences>true</OptimizeReferences>\n"
-		"      <GenerateDebugInformation>true</GenerateDebugInformation>\n"
-		"    </Link>\n"
-		"  </ItemDefinitionGroup>\n"
-		"  <ItemDefinitionGroup Condition=\"'$(Configuration)|$(Platform)'=='Debug|x64'\">\n"
-		"    <ClCompile>\n"
-		"      <WarningLevel>Level3</WarningLevel>\n"
-		"      <SDLCheck>true</SDLCheck>\n"
-		"      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>\n"
-		"      <ConformanceMode>true</ConformanceMode>\n"
-		"    </ClCompile>\n"
-		"    <Link>\n"
-		"      <SubSystem>Console</SubSystem>\n"
-		"      <GenerateDebugInformation>true</GenerateDebugInformation>\n"
-		"    </Link>\n"
-		"  </ItemDefinitionGroup>\n"
-		"  <Import Project=\"$(VCTargetsPath)\\Microsoft.Cpp.targets\" />\n"
-		"  <ImportGroup Label=\"ExtensionTargets\">\n"
-		"  </ImportGroup>\n"
-		"</Project>\n");
+    fprintf(f, "%s",
+        "  <PropertyGroup Label=\"Globals\">\n"
+        "    <VCProjectVersion>17.0</VCProjectVersion>\n"
+        "    <Keyword>Win32Proj</Keyword>\n"
+        "    <ProjectGuid>{5fde6895-ddd7-4173-9d15-d609a12293cc}</ProjectGuid>\n"
+        "    <RootNamespace>testint256</RootNamespace>\n"
+        "    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>\n"
+        "  </PropertyGroup>\n"
+        "  <Import Project=\"$(VCTargetsPath)\\Microsoft.Cpp.Default.props\" />\n"
+        "  <PropertyGroup Condition=\"'$(Configuration)|$(Platform)'=='Release|x64'\" Label=\"Configuration\">\n"
+        "    <ConfigurationType>Application</ConfigurationType>\n"
+        "    <UseDebugLibraries>false</UseDebugLibraries>\n"
+        "    <PlatformToolset>v143</PlatformToolset>\n"
+        "    <WholeProgramOptimization>true</WholeProgramOptimization>\n"
+        "    <CharacterSet>Unicode</CharacterSet>\n"
+        "  </PropertyGroup>\n"
+        "  <PropertyGroup Condition=\"'$(Configuration)|$(Platform)'=='Debug|x64'\" Label=\"Configuration\">\n"
+        "    <ConfigurationType>Application</ConfigurationType>\n"
+        "    <UseDebugLibraries>true</UseDebugLibraries>\n"
+        "    <PlatformToolset>v143</PlatformToolset>\n"
+        "    <WholeProgramOptimization>false</WholeProgramOptimization>\n"
+        "    <CharacterSet>Unicode</CharacterSet>\n"
+        "  </PropertyGroup>\n"
+        "  <Import Project=\"$(VCTargetsPath)\\Microsoft.Cpp.props\" />\n"
+        "  <ImportGroup Label=\"ExtensionSettings\" />\n"
+        "  <ImportGroup Label=\"Shared\" />\n"
+        "  <ImportGroup Label=\"PropertySheets\" Condition=\"'$(Configuration)|$(Platform)'=='Release|x64'\">\n"
+        "    <Import Project=\"$(UserRootDir)\\Microsoft.Cpp.$(Platform).user.props\" Condition=\"exists('$(UserRootDir)\\Microsoft.Cpp.$(Platform).user.props')\" Label=\"LocalAppDataPlatform\" />\n"
+        "  </ImportGroup>\n"
+        "  <ImportGroup Label=\"PropertySheets\" Condition=\"'$(Configuration)|$(Platform)'=='Debug|x64'\">\n"
+        "    <Import Project=\"$(UserRootDir)\\Microsoft.Cpp.$(Platform).user.props\" Condition=\"exists('$(UserRootDir)\\Microsoft.Cpp.$(Platform).user.props')\" Label=\"LocalAppDataPlatform\" />\n"
+        "  </ImportGroup>\n"
+        "  <PropertyGroup Label=\"UserMacros\" />\n"
+        "  <ItemDefinitionGroup Condition=\"'$(Configuration)|$(Platform)'=='Release|x64'\">\n"
+        "    <ClCompile>\n"
+        "      <WarningLevel>Level3</WarningLevel>\n"
+        "      <FunctionLevelLinking>true</FunctionLevelLinking>\n"
+        "      <IntrinsicFunctions>true</IntrinsicFunctions>\n"
+        "      <SDLCheck>true</SDLCheck>\n"
+        "      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>\n"
+        "      <ConformanceMode>true</ConformanceMode>\n"
+        "    </ClCompile>\n"
+        "    <Link>\n"
+        "      <SubSystem>Console</SubSystem>\n"
+        "      <EnableCOMDATFolding>true</EnableCOMDATFolding>\n"
+        "      <OptimizeReferences>true</OptimizeReferences>\n"
+        "      <GenerateDebugInformation>true</GenerateDebugInformation>\n"
+        "    </Link>\n"
+        "  </ItemDefinitionGroup>\n"
+        "  <ItemDefinitionGroup Condition=\"'$(Configuration)|$(Platform)'=='Debug|x64'\">\n"
+        "    <ClCompile>\n"
+        "      <WarningLevel>Level3</WarningLevel>\n"
+        "      <SDLCheck>true</SDLCheck>\n"
+        "      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>\n"
+        "      <ConformanceMode>true</ConformanceMode>\n"
+        "    </ClCompile>\n"
+        "    <Link>\n"
+        "      <SubSystem>Console</SubSystem>\n"
+        "      <GenerateDebugInformation>true</GenerateDebugInformation>\n"
+        "    </Link>\n"
+        "  </ItemDefinitionGroup>\n"
+        "  <Import Project=\"$(VCTargetsPath)\\Microsoft.Cpp.targets\" />\n"
+        "  <ImportGroup Label=\"ExtensionTargets\">\n"
+        "  </ImportGroup>\n"
+        "</Project>\n");
 
-	fclose(f);
+    fclose(f);
 }
 
 int main(int argc, char** argv)
 {
-	int i = 1;
+    int i = 1;
 
-	while (i < argc)
-	{
-		if (strcmp(argv[i], "-c") == 0)
-		{
-			i++;
-			if (i >= argc)
-			{
-				usage();
-				return 1;
-			}
-			if (strcmp(argv[i], "windows") == 0)
-				abi = 0;
-			else if (strcmp(argv[i], "unix") == 0)
-				abi = 1;
-			else
-			{
-				usage();
-				return 1;
-			}
-			i++;
-		}
-		
-		bits = atoi(argv[i]);
-		i++;
-	}
+    while (i < argc)
+    {
+        if (strcmp(argv[i], "-c") == 0)
+        {
+            i++;
+            if (i >= argc)
+            {
+                usage();
+                return 1;
+            }
+            if (strcmp(argv[i], "windows") == 0)
+                abi = 0;
+            else if (strcmp(argv[i], "unix") == 0)
+                abi = 1;
+            else
+            {
+                usage();
+                return 1;
+            }
+            i++;
+        }
+        else
+        {
+            bits = atoi(argv[i]);
+            i++;
+        }
+    }
 
-	if (bits < 128 || bits % 64 != 0)
-	{
-		usage();
-		return 2;
-	}
+    if (bits < 128 || bits % 64 != 0)
+    {
+        usage();
+        return 2;
+    }
 
-	generate_asm();
-	generate_c();
-	generate_cpp();
+    generate_asm();
+    generate_c();
+    generate_cpp();
 
-	generate_test_c();
-	if (abi == 0)
-	{
-		generate_project('c');
-		generate_project('x');
-	}
+    generate_test_c();
+    if (abi == 0)
+    {
+        generate_project('c');
+        generate_project('x');
+    }
 
-	generate_test_cpp();
-	if (abi == 1)
-		generate_makefile();
+    generate_test_cpp();
+    if (abi == 1)
+        generate_makefile();
 
-	return 0;
+    return 0;
 }
