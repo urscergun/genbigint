@@ -774,7 +774,7 @@ void generate_c()
     fprintf(f, "    if (sa != sb) neg%d(c);\n", bits);
     fprintf(f, "}\n\n");
 
-    fprintf(f, "void div%d_first_digit(INT%d a, INT%d b, INT%d c, INT%d r)\n", bits, bits, bits, bits, bits);
+    fprintf(f, "static void div%d_first_digit(INT%d a, INT%d b, INT%d c, INT%d r)\n", bits, bits, bits, bits, bits);
     fprintf(f, "{\n");
     fprintf(f, "    INT%d bb;\n", bits);
 
